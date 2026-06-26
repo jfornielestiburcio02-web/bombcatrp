@@ -1,106 +1,65 @@
+<?php
+session_start();
+
+// Si no hay sesión, intentamos procesar el código de Discord
+if (!isset($_SESSION['user']) && isset($_GET['code'])) {
+    $token_url = "https://discord.com/api/oauth2/token";
+    $data = [
+        'client_id' => 'TU_CLIENT_ID',
+        'client_secret' => 'TU_CLIENT_SECRET',
+        'grant_type' => 'authorization_code',
+        'code' => $_GET['code'],
+        'redirect_uri' => 'https://bomberscatrp.vercel.app/inicio/index.php',
+    ];
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $token_url);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = json_decode(curl_exec($ch), true);
+    curl_close($ch);
+
+    if (isset($response['access_token'])) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "https://discord.com/api/users/@me");
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer " . $response['access_token']]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $_SESSION['user'] = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+    }
+}
+
+// Si después de todo sigue sin haber sesión, echamos al usuario al login
+if (!isset($_SESSION['user'])) {
+    header("Location: login.php");
+    exit;
+}
+
+$user = $_SESSION['user'];
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso Institucional - Bombers CATRP</title>
+    <title>Panel - Bombers CATRP</title>
     <style>
-        /* Reset y base */
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* Contenedor principal */
-        .login-card {
-            background: #ffffff;
-            padding: 48px;
-            border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border: 1px solid #dcdcdc;
-            text-align: center;
-            width: 100%;
-            max-width: 380px;
-        }
-
-        /* Logo */
-        .logo {
-            width: 120px;
-            margin-bottom: 24px;
-        }
-
-        /* Títulos */
-        h2 {
-            color: #1a1a1a;
-            font-size: 1.25rem;
-            margin: 0 0 8px 0;
-            font-weight: 600;
-            letter-spacing: -0.5px;
-        }
-
-        p {
-            color: #555;
-            font-size: 0.9rem;
-            margin-bottom: 32px;
-        }
-
-        /* Botón de acceso */
-        .btn-discord {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            background-color: #2c3e50;
-            color: #ffffff;
-            padding: 12px 20px;
-            text-decoration: none;
-            border-radius: 2px;
-            font-weight: 500;
-            transition: background-color 0.2s ease;
-            font-size: 0.95rem;
-        }
-
-        .btn-discord:hover {
-            background-color: #1a252f;
-        }
-
-        .btn-discord img {
-            width: 20px;
-            filter: brightness(0) invert(1);
-        }
-
-        /* Pie de página */
-        .footer {
-            margin-top: 32px;
-            font-size: 0.75rem;
-            color: #999;
-        }
+        body { font-family: sans-serif; background: #f4f7f9; padding: 50px; text-align: center; }
+        .card { background: white; padding: 40px; border-radius: 4px; border-top: 4px solid #2c3e50; display: inline-block; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 320px; }
+        h1 { font-size: 1.2rem; color: #333; margin-bottom: 25px; }
+        .btn { display: block; width: 100%; margin: 10px 0; padding: 12px; background: #f8f9fa; border: 1px solid #dee2e6; color: #333; text-decoration: none; border-radius: 2px; font-weight: 500; }
+        .btn:hover { background: #e9ecef; }
     </style>
 </head>
 <body>
-
-    <div class="login-card">
-        <!-- Reemplaza el src con tu enlace de imagen -->
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJsMydNmb39vQFmlSOvm2lhiqZtW2unmzq7ZV99iwAbbUhqbM22xTrhoI&s=10" alt="Logo Bombers" class="logo">
-        
-        <h2>ACCESO - BOMBERS CATRP</h2>
-        <p>Sistema de gestión institucional restringido.</p>
-        
-        <a href="https://discord.com/oauth2/authorize?client_id=1519766493070495844&response_type=code&redirect_uri=https%3A%2F%2Fbomberscatrp.vercel.app%2Finicio%2Findex.php&scope=identify" class="btn-discord">
-            <img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" alt="Discord Icon">
-            Iniciar sesión con Discord
-        </a>
-
-        <div class="footer">
-            &copy; 2026 Bombers CATRP. Todos los derechos reservados.
-        </div>
+    <div class="card">
+        <h1>Bienvenido, <strong><?php echo htmlspecialchars($user['username']); ?></strong></h1>
+        <a href="/inicio/index.php/observaciones.php" class="btn">Observaciones</a>
+        <a href="/inicio/index.php/sanciones.php" class="btn">Sanciones</a>
+        <a href="/ascensos" class="btn">Ascensos / Descensos</a>
+        <a href="/minota" class="btn">Mi nota de entrada</a>
+        <br>
+        <a href="logout.php" style="font-size: 0.8rem; color: #999;">Cerrar sesión</a>
     </div>
-
 </body>
 </html>
