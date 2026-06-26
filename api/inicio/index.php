@@ -5,7 +5,7 @@ session_start();
 // DEBUG: Ver si existe la sesión y qué tiene dentro
 echo "<pre>";
 print_r($_SESSION);
-echo "</pre>"
+echo "</pre>";
 
 // Si no hay sesión, intentamos procesar el código de Discord
 if (!isset($_SESSION['user']) && isset($_GET['code'])) {
