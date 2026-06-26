@@ -1,23 +1,27 @@
 const { initializeApp } = require('firebase/app');
 const { getFirestore, collection, query, where, getDocs } = require('firebase/firestore');
 
-// Configuración de Firebase
-const firebaseConfig = { /* TU CONFIGURACIÓN DE FIREBASE AQUÍ */ };
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const firebaseConfig = {
+    apiKey: "AIzaSyCaKqY3JuR-5EkaUYRxK9lslX2qL0gOcic",
+    authDomain: "studio-2205130965-43d57.firebaseapp.com",
+    projectId: "studio-2205130965-43d57",
+    storageBucket: "studio-2205130965-43d57.firebasestorage.app",
+    messagingSenderId: "270382140390",
+    appId: "1:270382140390:web:749abd3d5a6fdc02e7a427"
+};
+
+const db = getFirestore(initializeApp(firebaseConfig));
 
 module.exports = async (req, res) => {
-    // 1. Lógica simple de sesión (simulada por cookie/token)
-    // En Vercel/Node, gestionamos el estado mediante cookies firmadas
-    const discordId = req.cookies.discordId; 
-
+    // Aquí el ID de Discord que viene en la cookie (la sesión persistente)
+    const discordId = req.cookies.uid; 
+    
     if (!discordId) {
-        return res.send(`<h1>Acceso Restringido</h1><a href="https://discord.com/api/oauth2/authorize?client_id=1519766493070495844&redirect_uri=https://bomberscatrp.vercel.app/inicio/index.php&response_type=code&scope=identify">Login con Discord</a>`);
+        return res.status(401).send('No has iniciado sesión. <a href="/api/login">Ir a Login</a>');
     }
 
-    // 2. Consultar Firestore
     const collections = ['observaciones', 'sanciones', 'registrosRangos', 'inactividades'];
-    let html = `<h1>Bienvenido, ${discordId}</h1>`;
+    let html = `<html><body style="font-family:sans-serif; padding:40px;"><h1>Panel Bombers CATRP</h1>`;
 
     for (let colName of collections) {
         html += `<h2>${colName.toUpperCase()}</h2>`;
@@ -25,9 +29,10 @@ module.exports = async (req, res) => {
         const snapshot = await getDocs(q);
         
         snapshot.forEach((doc) => {
-            html += `<div style="border:1px solid #ccc; padding:10px; margin:5px;">${JSON.stringify(doc.data())}</div>`;
+            const data = doc.data();
+            html += `<div style="border:1px solid #ccc; padding:10px; margin-bottom:5px;">${JSON.stringify(data)}</div>`;
         });
     }
-
+    html += `</body></html>`;
     res.send(html);
 };
