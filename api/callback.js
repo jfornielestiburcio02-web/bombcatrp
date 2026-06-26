@@ -25,5 +25,5 @@ module.exports = async (req, res) => {
 
     // 3. Guardar el ID en una cookie llamada 'uid' que dura 30 días
     res.setHeader('Set-Cookie', serialize('uid', userData.id, { path: '/', maxAge: 60 * 60 * 24 * 30 }));
-    res.redirect('/api/index'); // Redirige al panel
+    res.redirect('/api/acceso'); // Redirige al panel
 };
