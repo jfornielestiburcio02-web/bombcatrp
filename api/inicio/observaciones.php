@@ -1,14 +1,11 @@
 <?php
-session_set_cookie_params(0, '/'); 
+// ¡IMPORTANTE! Nada debe ir antes de esta línea. Ni espacios, ni echo, ni HTML.
+session_set_cookie_params(86400, '/');
 session_start();
-// DEBUG: Ver si existe la sesión y qué tiene dentro
-echo "<pre>";
-print_r($_SESSION);
-echo "</pre>";
 
 // 1. Verificación de sesión
 if (!isset($_SESSION['user'])) {
-    header("Location: login.php");
+    header("Location: ../login.php"); // Ajusta la ruta según tu estructura
     exit;
 }
 
@@ -16,7 +13,7 @@ $discordId = $_SESSION['user']['id'];
 $projectId = "studio-2205130965-43d57";
 $apiKey = "AIzaSyCaKqY3JuR-5EkaUYRxK9lslX2qL0gOcic";
 
-// 2. Preparar el Structured Query para Firestore
+// 2. Preparar el Structured Query
 $url = "https://firestore.googleapis.com/v1/projects/$projectId/databases/(default)/documents:runQuery?key=$apiKey";
 
 $query = [
@@ -53,9 +50,9 @@ $results = json_decode($response, true);
     <title>Observaciones - Bombers CATRP</title>
     <style>
         body { font-family: sans-serif; background: #f4f7f9; padding: 40px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .item { border-bottom: 1px solid #eee; padding: 10px 0; }
-        .btn-back { display: inline-block; margin-bottom: 20px; color: #555; text-decoration: none; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .item { border-bottom: 1px solid #eee; padding: 15px 0; }
+        .btn-back { display: inline-block; margin-bottom: 20px; color: #555; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -65,21 +62,23 @@ $results = json_decode($response, true);
     <h1>Mis Observaciones</h1>
 
     <?php
+    // Depuración: Si quieres ver si llegan datos, usa esto solo durante el desarrollo
+    // echo "<pre>" . print_r($results, true) . "</pre>"; 
+
     if (empty($results) || !isset($results[0]['document'])) {
         echo "<p>No tienes observaciones registradas o no hay notas positivas.</p>";
     } else {
         foreach ($results as $row) {
             if (!isset($row['document'])) continue;
-            $fields = $row['document']['fields'];
+            $f = $row['document']['fields'];
             echo "<div class='item'>";
-            echo "<strong>Tipo:</strong> " . $fields['tipo']['stringValue'] . "<br>";
-            echo "<strong>Nota:</strong> " . $fields['nota']['integerValue'] . "<br>";
-            echo "<strong>Fecha:</strong> " . date("d/m/Y", strtotime($fields['fechaRegistro']['timestampValue'])) . "<br>";
+            echo "<strong>Tipo:</strong> " . ($f['tipo']['stringValue'] ?? 'N/A') . "<br>";
+            echo "<strong>Nota:</strong> " . ($f['nota']['integerValue'] ?? 0) . "<br>";
+            echo "<strong>Fecha:</strong> " . (isset($f['fechaRegistro']['timestampValue']) ? date("d/m/Y", strtotime($f['fechaRegistro']['timestampValue'])) : 'N/A') . "<br>";
             echo "</div>";
         }
     }
     ?>
 </div>
-
 </body>
 </html>
