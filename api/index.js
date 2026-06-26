@@ -40,7 +40,7 @@ module.exports = (req, res) => {
             <p>Acceso restringido a personal autorizado.</p>
             <br>
             <a href="/api/login" class="btn-discord">
-                <img src="https://assets-global.website-files.com/6257adef93867e54f04c6328/639c279c65633a69a473130e_discord-logo.png" width="30" alt="Discord">
+                <img src="https://static.vecteezy.com/system/resources/thumbnails/018/930/718/small_2x/discord-logo-discord-icon-transparent-free-png.png" width="30" alt="Discord">
                 Iniciar sesión con Discord
             </a>
         </div>
