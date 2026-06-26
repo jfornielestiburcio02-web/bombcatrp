@@ -1,73 +1,86 @@
 <?php
-// 1. Configuración de sesión FORZADA
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_only_cookies', 1);
+// Configuración de Sesión
+session_set_cookie_params(86400, '/');
 session_start();
 
-// 2. Si ya tienes sesión, saltamos al panel
-if (isset($_SESSION['user'])) {
-    // Ya está logueado, continuar al panel
-} 
-// 3. Si no hay sesión, pero hay código de Discord, procesar
-elseif (isset($_GET['code'])) {
-    $params = [
-        'client_id' => '1519766493070495844',
-        'client_secret' => 'xITCUyPFMgCxcnfqNyD47YJeLpFJrxDO',
-        'grant_type' => 'authorization_code',
-        'code' => $_GET['code'],
-        'redirect_uri' => 'https://bomberscatrp.vercel.app/inicio/index.php'
-    ];
+$client_id = 'TU_CLIENT_ID';
+$client_secret = 'TU_CLIENT_SECRET';
+$project_id = "studio-2205130965-43d57";
+$api_key = "AIzaSyCaKqY3JuR-5EkaUYRxK9lslX2qL0gOcic";
 
-    $ch = curl_init("https://discord.com/api/oauth2/token");
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+// 1. Lógica de Autenticación con Discord
+if (!isset($_SESSION['user']) && isset($_GET['code'])) {
+    $token_url = "https://discord.com/api/oauth2/token";
+    $params = ['client_id' => $client_id, 'client_secret' => $client_secret, 'grant_type' => 'authorization_code', 'code' => $_GET['code'], 'redirect_uri' => 'https://bomberscatrp.vercel.app/inicio/index.php'];
+    $ch = curl_init($token_url);
+    curl_setopt($ch, CURLOPT_POST, 1); curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params)); curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     $response = json_decode(curl_exec($ch), true);
-    
     if (isset($response['access_token'])) {
         $ch = curl_init("https://discord.com/api/users/@me");
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer " . $response['access_token']]);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $user = json_decode(curl_exec($ch), true);
-        
-        // ¡Aquí guardamos!
-        $_SESSION['user'] = $user;
-    } else {
-        // ERROR: Discord rechazó el código
-        die("Error de autenticación con Discord: " . print_r($response, true));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer " . $response['access_token']]); curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $_SESSION['user'] = json_decode(curl_exec($ch), true);
     }
-} 
-// 4. Si después de todo esto no hay sesión, forzar login
-else {
-    header("Location: ../login.php");
-    exit;
+    header("Location: index.php"); exit;
 }
 
-// Si llegamos aquí, $user es real y la sesión vive
-$user = $_SESSION['user'];
+if (!isset($_SESSION['user'])) { die("Acceso denegado. <a href='../login.php'>Ir al Login</a>"); }
+$uId = $_SESSION['user']['id'];
+
+// 2. Lógica para ELIMINAR inactividad
+if (isset($_GET['delete_inactividad'])) {
+    $docId = $_GET['delete_inactividad'];
+    $ch = curl_init("https://firestore.googleapis.com/v1/projects/$project_id/databases/(default)/documents/inactividades/$docId?key=$api_key");
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE"); curl_exec($ch); curl_close($ch);
+    header("Location: index.php"); exit;
+}
+
+// 3. Función para leer Firestore
+function getFirestoreData($col, $uId, $project_id, $api_key) {
+    $url = "https://firestore.googleapis.com/v1/projects/$project_id/databases/(default)/documents:runQuery?key=$api_key";
+    $query = ['structuredQuery' => ['from' => [['collectionId' => $col]], 'where' => ['fieldFilter' => ['field' => ['fieldPath' => 'usuarioId'], 'op' => 'EQUAL', 'value' => ['stringValue' => $uId]]]]];
+    $ch = curl_init($url); curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); curl_setopt($ch, CURLOPT_POST, true); curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($query));
+    $res = json_decode(curl_exec($ch), true); curl_close($ch);
+    return $res;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel - Bombers CATRP</title>
+    <title>Panel Institucional</title>
     <style>
-        body { font-family: sans-serif; background: #f4f7f9; padding: 50px; text-align: center; }
-        .card { background: white; padding: 40px; border-radius: 4px; border-top: 4px solid #2c3e50; display: inline-block; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 320px; }
-        h1 { font-size: 1.2rem; color: #333; margin-bottom: 25px; }
-        .btn { display: block; width: 100%; margin: 10px 0; padding: 12px; background: #f8f9fa; border: 1px solid #dee2e6; color: #333; text-decoration: none; border-radius: 2px; font-weight: 500; }
-        .btn:hover { background: #e9ecef; }
+        body { font-family: sans-serif; background: #f4f7f9; padding: 20px; }
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 4px; border-left: 5px solid #2c3e50; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .btn-del { color: red; font-size: 0.8rem; text-decoration: none; border: 1px solid red; padding: 2px 5px; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>Bienvenido, <strong><?php echo htmlspecialchars($user['username']); ?></strong></h1>
-        <a href="/inicio/observaciones.php" class="btn">Observaciones</a>
-        <a href="/inicio/index.php/sanciones.php" class="btn">Sanciones</a>
-        <a href="/ascensos" class="btn">Ascensos / Descensos</a>
-        <a href="/minota" class="btn">Mi nota de entrada</a>
-        <br>
-        <a href="logout.php" style="font-size: 0.8rem; color: #999;">Cerrar sesión</a>
-    </div>
+    <h1>Bienvenido, <?php echo $_SESSION['user']['username']; ?></h1>
+
+    <h2>Observaciones</h2>
+    <?php foreach(getFirestoreData('observaciones', $uId, $project_id, $api_key) as $d) { 
+        if(!isset($d['document'])) continue; $f = $d['document']['fields'];
+        echo "<div class='card'>{$f['tipo']['stringValue']} - Nota: {$f['nota']['integerValue']}</div>";
+    } ?>
+
+    <h2>Sanciones</h2>
+    <?php foreach(getFirestoreData('sanciones', $uId, $project_id, $api_key) as $d) {
+        if(!isset($d['document'])) continue; $f = $d['document']['fields'];
+        echo "<div class='card'>Motivo: {$f['motivo']['stringValue']} - Tipo: {$f['tipo']['stringValue']}</div>";
+    } ?>
+
+    <h2>Ascensos / Descensos</h2>
+    <?php foreach(getFirestoreData('registrosRangos', $uId, $project_id, $api_key) as $d) {
+        if(!isset($d['document'])) continue; $f = $d['document']['fields'];
+        echo "<div class='card'>{$f['tipo']['stringValue']} a rango: {$f['nuevoRango']['stringValue']}</div>";
+    } ?>
+
+    <h2>Inactividades</h2>
+    <?php foreach(getFirestoreData('inactividades', $uId, $project_id, $api_key) as $d) {
+        if(!isset($d['document'])) continue; $f = $d['document']['fields'];
+        $docId = basename($d['document']['name']);
+        echo "<div class='card'>Motivo: {$f['motivo']['stringValue']} <br> <a class='btn-del' href='?delete_inactividad=$docId'>Eliminar</a></div>";
+    } ?>
 </body>
 </html>
