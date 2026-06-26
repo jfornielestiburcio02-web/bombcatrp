@@ -12,6 +12,7 @@ module.exports = async (req, res) => {
             <a href="/api/sanciones" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Sanciones</a>
             <a href="/api/ascensos" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Ascensos / Descensos</a>
             <a href="/api/inactividades" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Inactividades</a>
+            <a href="/api/nota_entrada" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Inactividades</a>
             <br><a href="/api/logout">Cerrar Sesión</a>
         </div>
         </body></html>
