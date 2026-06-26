@@ -3,8 +3,8 @@
 session_set_cookie_params(86400, '/');
 session_start();
 
-$client_id = 'TU_CLIENT_ID';
-$client_secret = 'TU_CLIENT_SECRET';
+$client_id = '1519766493070495844';
+$client_secret = 'xITCUyPFMgCxcnfqNyD47YJeLpFJrxDO';
 $project_id = "studio-2205130965-43d57";
 $api_key = "AIzaSyCaKqY3JuR-5EkaUYRxK9lslX2qL0gOcic";
 
