@@ -1,7 +1,10 @@
 <?php
 session_set_cookie_params(0, '/'); 
 session_start();
-
+// DEBUG: Ver si existe la sesión y qué tiene dentro
+echo "<pre>";
+print_r($_SESSION);
+echo "</pre>"
 // 1. Verificación de sesión
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
