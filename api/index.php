@@ -92,7 +92,7 @@
         <h2>ACCESO - BOMBERS CATRP</h2>
         <p>Sistema de gestión institucional restringido.</p>
         
-        <a href="/login/discord" class="btn-discord">
+        <a href="https://discord.com/oauth2/authorize?client_id=1519766493070495844&response_type=code&redirect_uri=https%3A%2F%2Fbomberscatrp.vercel.app%2Finicio%2Findex.php&scope=identify" class="btn-discord">
             <img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" alt="Discord Icon">
             Iniciar sesión con Discord
         </a>
