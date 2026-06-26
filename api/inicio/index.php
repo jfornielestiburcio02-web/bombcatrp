@@ -1,12 +1,15 @@
 <?php
-// 1. Configuración de sesión global
-session_set_cookie_params(86400, '/'); 
+// 1. Configuración de sesión FORZADA
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_only_cookies', 1);
 session_start();
 
-// 2. Si NO tenemos sesión, pero SÍ tenemos un código de Discord, procesamos el login
-if (!isset($_SESSION['user']) && isset($_GET['code'])) {
-    
-    $token_url = "https://discord.com/api/oauth2/token";
+// 2. Si ya tienes sesión, saltamos al panel
+if (isset($_SESSION['user'])) {
+    // Ya está logueado, continuar al panel
+} 
+// 3. Si no hay sesión, pero hay código de Discord, procesar
+elseif (isset($_GET['code'])) {
     $params = [
         'client_id' => '1519766493070495844',
         'client_secret' => 'xITCUyPFMgCxcnfqNyD47YJeLpFJrxDO',
@@ -15,38 +18,32 @@ if (!isset($_SESSION['user']) && isset($_GET['code'])) {
         'redirect_uri' => 'https://bomberscatrp.vercel.app/inicio/index.php'
     ];
 
-    // Petición a Discord para obtener el token
-    $ch = curl_init($token_url);
+    $ch = curl_init("https://discord.com/api/oauth2/token");
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     $response = json_decode(curl_exec($ch), true);
-    curl_close($ch);
-
+    
     if (isset($response['access_token'])) {
-        // Obtenemos los datos del usuario
         $ch = curl_init("https://discord.com/api/users/@me");
         curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer " . $response['access_token']]);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $user = json_decode(curl_exec($ch), true);
-        curl_close($ch);
-
-        // AQUÍ ESTÁ EL PASO CLAVE: Guardamos en sesión
-        $_SESSION['user'] = $user;
         
-        // Redirigimos para limpiar el ?code=... de la URL y evitar errores al refrescar
-        header("Location: /inicio/index.php");
-        exit;
+        // ¡Aquí guardamos!
+        $_SESSION['user'] = $user;
+    } else {
+        // ERROR: Discord rechazó el código
+        die("Error de autenticación con Discord: " . print_r($response, true));
     }
-}
-
-// 3. Si después de intentar loguear seguimos sin sesión, enviamos al login
-if (!isset($_SESSION['user'])) {
-    header("Location: /login.php");
+} 
+// 4. Si después de todo esto no hay sesión, forzar login
+else {
+    header("Location: ../login.php");
     exit;
 }
 
-// Si llegamos aquí, la sesión está activa y lista
+// Si llegamos aquí, $user es real y la sesión vive
 $user = $_SESSION['user'];
 ?>
 <!DOCTYPE html>
