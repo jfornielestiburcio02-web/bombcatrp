@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
     </head>
     <body>
         <div class="container">
-            <a href="/api/index">← Volver</a>
+            <a href="/api/acceso">← Volver</a>
             <h1>Mis Observaciones</h1>
     `;
 
