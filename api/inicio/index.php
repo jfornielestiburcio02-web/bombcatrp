@@ -1,47 +1,52 @@
 <?php
-session_set_cookie_params(0, '/'); 
+// 1. Configuración de sesión global
+session_set_cookie_params(86400, '/'); 
 session_start();
 
-// DEBUG: Ver si existe la sesión y qué tiene dentro
-echo "<pre>";
-print_r($_SESSION);
-echo "</pre>";
-
-// Si no hay sesión, intentamos procesar el código de Discord
+// 2. Si NO tenemos sesión, pero SÍ tenemos un código de Discord, procesamos el login
 if (!isset($_SESSION['user']) && isset($_GET['code'])) {
+    
     $token_url = "https://discord.com/api/oauth2/token";
-    $data = [
+    $params = [
         'client_id' => '1519766493070495844',
         'client_secret' => 'xITCUyPFMgCxcnfqNyD47YJeLpFJrxDO',
         'grant_type' => 'authorization_code',
         'code' => $_GET['code'],
-        'redirect_uri' => 'https://bomberscatrp.vercel.app/inicio/index.php',
+        'redirect_uri' => 'https://bomberscatrp.vercel.app/inicio/index.php'
     ];
 
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $token_url);
+    // Petición a Discord para obtener el token
+    $ch = curl_init($token_url);
     curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     $response = json_decode(curl_exec($ch), true);
     curl_close($ch);
 
     if (isset($response['access_token'])) {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, "https://discord.com/api/users/@me");
+        // Obtenemos los datos del usuario
+        $ch = curl_init("https://discord.com/api/users/@me");
         curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer " . $response['access_token']]);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $_SESSION['user'] = json_decode(curl_exec($ch), true);
+        $user = json_decode(curl_exec($ch), true);
         curl_close($ch);
+
+        // AQUÍ ESTÁ EL PASO CLAVE: Guardamos en sesión
+        $_SESSION['user'] = $user;
+        
+        // Redirigimos para limpiar el ?code=... de la URL y evitar errores al refrescar
+        header("Location: /inicio/index.php");
+        exit;
     }
 }
 
-// Si después de todo sigue sin haber sesión, echamos al usuario al login
+// 3. Si después de intentar loguear seguimos sin sesión, enviamos al login
 if (!isset($_SESSION['user'])) {
-    header("Location: login.php");
+    header("Location: /login.php");
     exit;
 }
 
+// Si llegamos aquí, la sesión está activa y lista
 $user = $_SESSION['user'];
 ?>
 <!DOCTYPE html>
