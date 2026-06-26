@@ -34,7 +34,7 @@ module.exports = async (req, res) => {
     </head>
     <body>
         <div class="container">
-            <a href="/api/index" class="back-btn">← Volver al panel</a>
+            <a href="/api/acceso" class="back-btn">← Volver al panel</a>
             <h1>Nota de Entrada</h1>
     `;
 
