@@ -23,7 +23,14 @@ module.exports = async (req, res) => {
     });
     const userData = await userResponse.json();
 
-    // 3. Guardar el ID en una cookie llamada 'uid' que dura 30 días
-    res.setHeader('Set-Cookie', serialize('uid', userData.id, { path: '/', maxAge: 60 * 60 * 24 * 30 }));
+    // 3. Guardar el ID y el Nombre de Usuario (username) en cookies
+    // Creamos dos cookies para que cada archivo pueda leer lo que necesite
+    const cookieOptions = { path: '/', maxAge: 60 * 60 * 24 * 30 };
+    
+    res.setHeader('Set-Cookie', [
+        serialize('uid', userData.id, cookieOptions),
+        serialize('username', userData.username, cookieOptions) 
+    ]);
+
     res.redirect('/api/acceso'); // Redirige al panel
 };
