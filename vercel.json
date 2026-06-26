@@ -1,0 +1,29 @@
+{
+  "functions": {
+    "api/**/*.php": {
+      "runtime": "vercel-php@0.7.1"
+    }
+  },
+  "routes": [
+    {
+      "src": "/acceso/documentos/(.*)",
+      "dest": "/documentos/$1"
+    },
+    {
+      "src": "/acceso/dashboard",
+      "dest": "/api/acceso/dashboard.php"
+    },
+    {
+      "src": "/api/acceso/callback.php",
+      "dest": "/api/acceso/callback.php"
+    },
+    {
+      "src": "/acceso/(.*)",
+      "dest": "/api/acceso/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/$1"
+    }
+  ]
+}
