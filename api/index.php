@@ -1,5 +1,5 @@
 
-<!-- Estructura Sugerida -->
+<link rel="stylesheet" href="/index.css"/>
 <div class="login-container">
   <div class="card">
     <div class="logo">
