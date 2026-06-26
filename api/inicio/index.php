@@ -54,7 +54,7 @@ $user = $_SESSION['user'];
 <body>
     <div class="card">
         <h1>Bienvenido, <strong><?php echo htmlspecialchars($user['username']); ?></strong></h1>
-        <a href="/inicio/index.php/observaciones.php" class="btn">Observaciones</a>
+        <a href="/inicio/observaciones.php" class="btn">Observaciones</a>
         <a href="/inicio/index.php/sanciones.php" class="btn">Sanciones</a>
         <a href="/ascensos" class="btn">Ascensos / Descensos</a>
         <a href="/minota" class="btn">Mi nota de entrada</a>
