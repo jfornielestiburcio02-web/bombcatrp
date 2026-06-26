@@ -5,8 +5,8 @@ session_start();
 if (!isset($_SESSION['user']) && isset($_GET['code'])) {
     $token_url = "https://discord.com/api/oauth2/token";
     $data = [
-        'client_id' => 'TU_CLIENT_ID',
-        'client_secret' => 'TU_CLIENT_SECRET',
+        'client_id' => '1519766493070495844',
+        'client_secret' => 'xITCUyPFMgCxcnfqNyD47YJeLpFJrxDO',
         'grant_type' => 'authorization_code',
         'code' => $_GET['code'],
         'redirect_uri' => 'https://bomberscatrp.vercel.app/inicio/index.php',
