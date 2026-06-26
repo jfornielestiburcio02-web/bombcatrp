@@ -10,5 +10,5 @@ module.exports = async (req, res) => {
 
     // Si estás aquí, el usuario está autenticado. 
     // Para redirigir a la raíz desde el servidor usa esto:
-    return res.redirect('/');
+    return res.redirect('/api/login');
 };
