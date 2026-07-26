@@ -25,14 +25,10 @@ module.exports = async (req, res) => {
         });
         const userData = await userResponse.json();
 
-        // Guardamos la cookie 'uid' con el ID de Discord del usuario (dura 7 días)
-        res.cookie('uid', userData.id, { 
-            httpOnly: true, 
-            secure: true, 
-            maxAge: 7 * 24 * 60 * 60 * 1000 
-        });
+        // Guardamos la cookie 'uid' y la cookie 'username'
+        res.cookie('uid', userData.id, { httpOnly: true, secure: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
+        res.cookie('username', userData.username, { httpOnly: true, secure: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-        // Redirigimos al menú principal de acceso
         res.redirect('/api/acceso');
     } catch (err) {
         console.error('Error en el callback de Discord:', err);
