@@ -72,6 +72,8 @@ app.all('/api/sanciones', require('./api/sanciones'));
 // 3. Conectar las sub-rutas de la carpeta /api/admin/
 app.all('/api/admin/eliPonInfo', require('./api/admin/eliPonInfo'));
 app.all('/api/admin/gestionarFal', require('./api/admin/gestionarFal'));
+app.all('/api/admin/otros', require('./api/admin/otros'));
+app.all('/api/admin/comunicAdos', require('./api/admin/comunicAdos'));
 app.all('/api/admin/ponFal', require('./api/admin/ponFal'));
 
 // Mantener el servidor abierto en el puerto que asigne Render
