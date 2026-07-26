@@ -143,7 +143,7 @@ module.exports = async (req, res) => {
                     <label style="display:block; margin-bottom:5px; font-weight:bold;">ID de Discord del usuario:</label>
                     <input type="text" name="usuarioId" placeholder="Ej: 1146942069433184317" required style="width:100%; padding:8px; margin-bottom:12px; border:1px solid #ccc; border-radius:4px;">
                     
-                    <label style="display:block; margin-bottom:5px; font-weight:bold;">Nombre de usuario en Discord:</label>
+                    <label style="display:block; margin-bottom:5px; font-weight:bold;">Nombre de usuario en Discord (OFICIAL, NO APODO):</label>
                     <input type="text" name="usuarioNombre" placeholder="Ej: _senorx_" required style="width:100%; padding:8px; margin-bottom:12px; border:1px solid #ccc; border-radius:4px;">
                     
                     <label style="display:block; margin-bottom:5px; font-weight:bold;">Tipo de sanción:</label>
