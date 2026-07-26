@@ -40,13 +40,8 @@ module.exports = async (req, res) => {
 
     // 2. Manejar la acción POST para eliminar el informe de la BD
     if (req.method === 'POST') {
-        let body = '';
-        for await (const chunk of req) {
-            body += chunk;
-        }
-        const params = new URLSearchParams(body);
-        const action = params.get('action');
-        const docId = params.get('docId');
+        const action = req.body.action;
+        const docId = req.body.docId;
 
         if (action === 'eliminar' && docId) {
             try {
