@@ -5,7 +5,7 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Ruta principal (la página de bienvenida con tu diseño)
+// 1. Ruta principal (la página de bienvenida)
 app.get('/', (req, res) => {
     res.send(`
     <html>
@@ -57,8 +57,25 @@ app.get('/', (req, res) => {
     `);
 });
 
+// 2. Conectar automáticamente todos tus archivos existentes en la carpeta /api/
+app.all('/api/login', require('./api/login'));
+app.all('/api/callback', require('./api/callback'));
+app.all('/api/acceso', require('./api/acceso'));
+app.all('/api/administracion', require('./api/administracion'));
+app.all('/api/ascensos', require('./api/ascensos'));
+app.all('/api/inactividades', require('./api/inactividades'));
+app.all('/api/logout', require('./api/logout'));
+app.all('/api/nota_entrada', require('./api/nota_entrada'));
+app.all('/api/observaciones', require('./api/observaciones'));
+app.all('/api/sanciones', require('./api/sanciones'));
+
+// 3. Conectar las sub-rutas de la carpeta /api/admin/
+app.all('/api/admin/eliPonInfo', require('./api/admin/eliPonInfo'));
+app.all('/api/admin/gestionarFal', require('./api/admin/gestionarFal'));
+app.all('/api/admin/ponFal', require('./api/admin/ponFal'));
+
 // Mantener el servidor abierto en el puerto que asigne Render
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
