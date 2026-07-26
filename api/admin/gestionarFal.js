@@ -41,15 +41,10 @@ module.exports = async (req, res) => {
 
     // 2. Manejar la acción cuando se pulsa Aceptar o Denegar (Método POST)
     if (req.method === 'POST') {
-        let body = '';
-        for await (const chunk of req) {
-            body += chunk;
-        }
-        const params = new URLSearchParams(body);
-        const docId = params.get('docId');
-        const action = params.get('action'); // 'aceptar' o 'denegar'
-        const usuarioId = params.get('usuarioId');
-        const motivo = params.get('motivo');
+        const docId = req.body.docId;
+        const action = req.body.action; // 'aceptar' o 'denegar'
+        const usuarioId = req.body.usuarioId;
+        const motivo = req.body.motivo;
 
         if (docId && usuarioId) {
             const mensaje = action === 'aceptar'
