@@ -4,6 +4,21 @@ module.exports = async (req, res) => {
     const cookies = parse(req.headers.cookie || '');
     if (!cookies.uid) return res.redirect('/api/login');
 
+    // ── LLAMADA AL BOT PARA ASIGNAR EL ROL ──
+    try {
+        await fetch('http://nc.lynxnodes.es:25700/dar-rol', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                userId: cookies.uid,                // ID de Discord del usuario obtenido de la cookie
+                roleId: '1307842633909014568'    // Reemplaza esto con el ID numérico del rol que deseas dar
+            })
+        });
+    } catch (err) {
+        console.error('Error al comunicarse con el bot de Discord:', err);
+    }
+
+    // ── RENDERIZADO DEL PANEL ──
     res.send(`
         <html><body style="font-family:sans-serif; text-align:center; padding:50px;">
         <h1>Panel Bombers CATRP</h1>
