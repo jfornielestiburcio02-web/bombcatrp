@@ -94,7 +94,7 @@ module.exports = async (req, res) => {
 
     const nombreUsuario = cookies.username || 'Desconocido';
 
-    // 4. Renderizar el panel HTML con protección contra doble clic en los formularios
+    // 4. Renderizar el panel HTML con el textarea integrado correctamente
     res.setHeader('Content-Type', 'text/html');
     res.send(`
         <html>
@@ -124,14 +124,19 @@ module.exports = async (req, res) => {
                     <div style="background:white; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
                         <p style="margin:5px 0;"><b>Usuario:</b> ${s.usuarioNombre || 'Desconocido'} (<code>${s.usuarioId}</code>)</p>
                         <p style="margin:5px 0;"><b>Inicio:</b> ${s.inicio} | <b>Fin:</b> ${s.fin}</p>
-                        <p style="margin:5px 0;"><b>Motivo:</b> ${s.motivo}</p>
+                        <p style="margin:5px 0;"><b>Motivo original:</b> ${s.motivo}</p>
                         
-                        <form method="POST" onsubmit="bloquearBotones(this)" style="display:flex; gap:10px; margin-top:15px;">
+                        <form method="POST" onsubmit="bloquearBotones(this)" style="margin-top:15px;">
                             <input type="hidden" name="docId" value="${s.id}">
                             <input type="hidden" name="usuarioId" value="${s.usuarioId}">
-                            <input type="hidden" name="motivo" value="${s.motivo}">
-                            <button type="submit" name="action" value="aceptar" style="background:#27ae60; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; flex:1; font-weight:bold;">Aceptar</button>
-                            <button type="submit" name="action" value="denegar" style="background:#c0392b; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; flex:1; font-weight:bold;">Denegar</button>
+                            
+                            <label style="font-size: 13px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Razón / Respuesta para el usuario:</label>
+                            <textarea name="motivo" style="width: 100%; height: 70px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; box-sizing: border-box; font-family: sans-serif; margin-bottom: 12px;" required>${s.motivo || ''}</textarea>
+                            
+                            <div style="display:flex; gap:10px;">
+                                <button type="submit" name="action" value="aceptar" style="background:#27ae60; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; flex:1; font-weight:bold;">Aceptar</button>
+                                <button type="submit" name="action" value="denegar" style="background:#c0392b; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; flex:1; font-weight:bold;">Denegar</button>
+                            </div>
                         </form>
                     </div>
                 `).join('')}
