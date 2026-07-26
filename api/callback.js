@@ -1,36 +1,37 @@
-const { serialize } = require('cookie');
+const { parse } = require('cookie');
 
 module.exports = async (req, res) => {
-    const { code } = req.query;
-    
-    // 1. Intercambiar code por token
-    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-            client_id: '1519766493070495844',
-            client_secret: 'xITCUyPFMgCxcnfqNyD47YJeLpFJrxDO',
-            grant_type: 'authorization_code',
-            code,
-            redirect_uri: 'https://bomberscatrp.vercel.app/api/callback'
-        })
-    });
-    const tokenData = await tokenResponse.json();
+    const cookies = parse(req.headers.cookie || '');
+    if (!cookies.uid) return res.redirect('/api/login');
 
-    // 2. Obtener datos del usuario
-    const userResponse = await fetch('https://discord.com/api/users/@me', {
-        headers: { Authorization: `Bearer ${tokenData.access_token}` }
-    });
-    const userData = await userResponse.json();
+    let isAdmin = false;
 
-    // 3. Guardar el ID y el Nombre de Usuario (username) en cookies
-    // Creamos dos cookies para que cada archivo pueda leer lo que necesite
-    const cookieOptions = { path: '/', maxAge: 60 * 60 * 24 * 30 };
-    
-    res.setHeader('Set-Cookie', [
-        serialize('uid', userData.id, cookieOptions),
-        serialize('username', userData.username, cookieOptions) 
-    ]);
+    try {
+        const response = await fetch('http://nc.lynxnodes.es:25700/verificar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: cookies.uid })
+        });
+        const data = await response.json();
+        isAdmin = data.isAdmin || false;
+    } catch (err) {
+        console.error('Error al comunicarse con el bot:', err);
+    }
 
-    res.redirect('/api/acceso'); // Redirige al panel
+    res.send(`
+        <html><body style="font-family:sans-serif; text-align:center; padding:50px;">
+        <h1>Panel Bombers CATRP</h1>
+        <div style="display:grid; gap:10px; max-width:300px; margin:auto;">
+            <a href="/api/observaciones" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Observaciones</a>
+            <a href="/api/sanciones" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Sanciones</a>
+            <a href="/api/ascensos" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Ascensos / Descensos</a>
+            <a href="/api/inactividades" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Inactividades</a>
+            <a href="/api/nota_entrada" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Nota de entrada (Inicial)</a>
+            
+            ${isAdmin ? `<a href="/api/administracion" style="padding:15px; background:#c0392b; color:white; text-decoration:none;">Acceso Altos Cargos</a>` : ''}
+
+            <br><a href="/api/logout">Cerrar Sesión</a>
+        </div>
+        </body></html>
+    `);
 };
