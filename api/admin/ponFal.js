@@ -150,7 +150,7 @@ module.exports = async (req, res) => {
                     <input type="text" name="tipo" placeholder="Ej: Moderada / Grave" required style="width:100%; padding:8px; margin-bottom:12px; border:1px solid #ccc; border-radius:4px;">
                     
                     <label style="display:block; margin-bottom:5px; font-weight:bold;">Motivo:</label>
-                    textarea name="motivo" rows="3" placeholder="Escribe el motivo detallado..." required style="width:100%; padding:8px; margin-bottom:15px; border:1px solid #ccc; border-radius:4px;"></textarea>
+                    <textarea name="motivo" rows="3" placeholder="Escribe el motivo detallado..." required style="width:100%; padding:8px; margin-bottom:15px; border:1px solid #ccc; border-radius:4px;"></textarea>
                     
                     <button type="submit" style="width:100%; background:#c0392b; color:white; border:none; padding:12px; border-radius:4px; font-weight:bold; cursor:pointer;">Aplicar Sanción y Notificar</button>
                 </form>
