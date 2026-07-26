@@ -4,21 +4,23 @@ module.exports = async (req, res) => {
     const cookies = parse(req.headers.cookie || '');
     if (!cookies.uid) return res.redirect('/api/login');
 
-    // ── LLAMADA AL BOT PARA ASIGNAR EL ROL ──
+    let isAdmin = false;
+
     try {
-        await fetch('http://nc.lynxnodes.es:25700/dar-rol', {
+        const response = await fetch('http://nc.lynxnodes.es:25700/dar-rol', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                userId: cookies.uid,                // ID de Discord del usuario obtenido de la cookie
-                roleId: '1307842633909014568'    // Reemplaza esto con el ID numérico del rol que deseas dar
+                userId: cookies.uid, 
+                roleId: 'TU_ID_DE_ROL_DE_DISCORD' // El rol base que se le otorga al entrar (opcional)
             })
         });
+        const data = await response.json();
+        isAdmin = data.isAdmin || false;
     } catch (err) {
-        console.error('Error al comunicarse con el bot de Discord:', err);
+        console.error('Error al comunicarse con el bot:', err);
     }
 
-    // ── RENDERIZADO DEL PANEL ──
     res.send(`
         <html><body style="font-family:sans-serif; text-align:center; padding:50px;">
         <h1>Panel Bombers CATRP</h1>
@@ -28,6 +30,9 @@ module.exports = async (req, res) => {
             <a href="/api/ascensos" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Ascensos / Descensos</a>
             <a href="/api/inactividades" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Inactividades</a>
             <a href="/api/nota_entrada" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Nota de entrada (Inicial)</a>
+            
+            ${isAdmin ? `<a href="/api/administracion" style="padding:15px; background:#c0392b; color:white; text-decoration:none;">Acceso Altos Cargos</a>` : ''}
+
             <br><a href="/api/logout">Cerrar Sesión</a>
         </div>
         </body></html>
