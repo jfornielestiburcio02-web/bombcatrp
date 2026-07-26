@@ -99,7 +99,7 @@ module.exports = async (req, res) => {
 
         // Redirección segura POST-redirect-GET para evitar reenvíos
         res.statusCode = 303;
-        res.setHeader('Location', '/api/admin/sancionar');
+        res.setHeader('Location', '/api/admin/ponFal');
         return res.end();
     }
 
