@@ -56,7 +56,7 @@ module.exports = async (req, res) => {
                 ? `<@${usuarioId}>, se te ha aceptado la solicitud con la descripción: ${motivo}`
                 : `<@${usuarioId}>, se te ha denegado la solicitud con la descripción: ${motivo}`;
 
-            // Enviar alerta por Webhook de Discord
+            // Enviar alerta por Webhook de Discord (Una sola vez)
             try {
                 await fetch(WEBHOOK_URL, {
                     method: 'POST',
@@ -75,7 +75,10 @@ module.exports = async (req, res) => {
             }
         }
 
-        return res.redirect('/api/admin/gestionarFal');
+        // Usamos el código 303 para evitar que el navegador reenvíe el formulario al actualizar
+        res.statusCode = 303;
+        res.setHeader('Location', '/api/admin/gestionarFal');
+        return res.end();
     }
 
     // 3. Obtener los documentos de Firestore (Método GET)
@@ -91,11 +94,23 @@ module.exports = async (req, res) => {
 
     const nombreUsuario = cookies.username || 'Desconocido';
 
-    // 4. Renderizar el panel HTML con los datos de Firestore
+    // 4. Renderizar el panel HTML con protección contra doble clic en los formularios
     res.setHeader('Content-Type', 'text/html');
     res.send(`
         <html>
-        <head><title>Gestionar Faltas de Asistencia</title></head>
+        <head>
+            <title>Gestionar Faltas de Asistencia</title>
+            <script>
+                function bloquearBotones(form) {
+                    const botones = form.querySelectorAll('button');
+                    botones.forEach(b => {
+                        b.disabled = true;
+                        b.style.opacity = '0.5';
+                        b.innerText = 'Procesando...';
+                    });
+                }
+            </script>
+        </head>
         <body style="font-family:sans-serif; text-align:center; padding:30px; background:#f4f4f9;">
             <h2>Acceso Activo de administración como: ${nombreUsuario}</h2>
             <hr style="margin: 20px auto; width: 60%; border: 1px solid #ddd;">
@@ -111,7 +126,7 @@ module.exports = async (req, res) => {
                         <p style="margin:5px 0;"><b>Inicio:</b> ${s.inicio} | <b>Fin:</b> ${s.fin}</p>
                         <p style="margin:5px 0;"><b>Motivo:</b> ${s.motivo}</p>
                         
-                        <form method="POST" style="display:flex; gap:10px; margin-top:15px;">
+                        <form method="POST" onsubmit="bloquearBotones(this)" style="display:flex; gap:10px; margin-top:15px;">
                             <input type="hidden" name="docId" value="${s.id}">
                             <input type="hidden" name="usuarioId" value="${s.usuarioId}">
                             <input type="hidden" name="motivo" value="${s.motivo}">
