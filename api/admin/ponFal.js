@@ -43,15 +43,10 @@ module.exports = async (req, res) => {
 
     // 2. Manejar acciones POST (Crear o Eliminar sanción)
     if (req.method === 'POST') {
-        let body = '';
-        for await (const chunk of req) {
-            body += chunk;
-        }
-        const params = new URLSearchParams(body);
-        const action = params.get('action');
+        const action = req.body.action;
 
         if (action === 'eliminar') {
-            const docId = params.get('docId');
+            const docId = req.body.docId;
             if (docId) {
                 try {
                     await deleteDoc(doc(db, 'sanciones', docId));
@@ -60,10 +55,10 @@ module.exports = async (req, res) => {
                 }
             }
         } else if (action === 'crear') {
-            const usuarioId = params.get('usuarioId');
-            const usuarioNombre = params.get('usuarioNombre');
-            const tipo = params.get('tipo');
-            const motivo = params.get('motivo');
+            const usuarioId = req.body.usuarioId;
+            const usuarioNombre = req.body.usuarioNombre;
+            const tipo = req.body.tipo;
+            const motivo = req.body.motivo;
 
             if (usuarioId && motivo && tipo) {
                 const fechaRegistro = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
@@ -97,7 +92,7 @@ module.exports = async (req, res) => {
             }
         }
 
-        // Redirección segura POST-redirect-GET para evitar reenvíos
+        // Redirección POST-redirect-GET
         res.statusCode = 303;
         res.setHeader('Location', '/api/admin/ponFal');
         return res.end();
