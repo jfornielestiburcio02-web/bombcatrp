@@ -7,16 +7,19 @@ module.exports = async (req, res) => {
     let isAdmin = false;
 
     try {
-        const response = await fetch('http://nc.lynxnodes.es:25700/dar-rol', {
+        const response = await fetch('http://nc.lynxnodes.es:25700/verificar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                userId: cookies.uid, 
-                roleId: 'TU_ID_DE_ROL_DE_DISCORD' // El rol base que se le otorga al entrar (opcional)
-            })
+            body: JSON.stringify({ userId: cookies.uid })
         });
-        const data = await response.json();
-        isAdmin = data.isAdmin || false;
+
+        // Leemos la respuesta como texto para evitar que colapse si está vacía
+        const textResponse = await response.text();
+        
+        if (textResponse) {
+            const data = JSON.parse(textResponse);
+            isAdmin = data.isAdmin || false;
+        }
     } catch (err) {
         console.error('Error al comunicarse con el bot:', err);
     }
