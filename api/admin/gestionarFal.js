@@ -96,13 +96,23 @@ module.exports = async (req, res) => {
         <head>
             <title>Gestionar Faltas de Asistencia</title>
             <script>
-                function bloquearBotones(form) {
+                function procesarAccion(button, actionValue) {
+                    const form = button.closest('form');
+                    
                     const botones = form.querySelectorAll('button');
                     botones.forEach(b => {
                         b.disabled = true;
                         b.style.opacity = '0.5';
                         b.innerText = 'Procesando...';
                     });
+
+                    let actionInput = document.createElement('input');
+                    actionInput.type = 'hidden';
+                    actionInput.name = 'action';
+                    actionInput.value = actionValue;
+                    form.appendChild(actionInput);
+
+                    form.submit();
                 }
             </script>
         </head>
@@ -121,7 +131,7 @@ module.exports = async (req, res) => {
                         <p style="margin:5px 0;"><b>Inicio:</b> ${s.inicio} | <b>Fin:</b> ${s.fin}</p>
                         <p style="margin:5px 0;"><b>Motivo original:</b> ${s.motivo}</p>
                         
-                        <form method="POST" onsubmit="bloquearBotones(this)" style="margin-top:15px;">
+                        <form method="POST" style="margin-top:15px;">
                             <input type="hidden" name="docId" value="${s.id}">
                             <input type="hidden" name="usuarioId" value="${s.usuarioId}">
                             
@@ -129,8 +139,8 @@ module.exports = async (req, res) => {
                             <textarea name="motivo" style="width: 100%; height: 70px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; box-sizing: border-box; font-family: sans-serif; margin-bottom: 12px;" required>${s.motivo || ''}</textarea>
                             
                             <div style="display:flex; gap:10px;">
-                                <button type="submit" name="action" value="aceptar" style="background:#27ae60; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; flex:1; font-weight:bold;">Aceptar</button>
-                                <button type="submit" name="action" value="denegar" style="background:#c0392b; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; flex:1; font-weight:bold;">Denegar</button>
+                                <button type="button" onclick="procesarAccion(this, 'aceptar')" style="background:#27ae60; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; flex:1; font-weight:bold;">Aceptar</button>
+                                <button type="button" onclick="procesarAccion(this, 'denegar')" style="background:#c0392b; color:white; border:none; padding:10px 15px; border-radius:4px; cursor:pointer; flex:1; font-weight:bold;">Denegar</button>
                             </div>
                         </form>
                     </div>
