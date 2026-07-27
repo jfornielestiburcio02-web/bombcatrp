@@ -1,6 +1,6 @@
 const { parse } = require('cookie');
 const { initializeApp, getApps } = require('firebase/app');
-const { getFirestore, collection, getDocs, addDoc } = require('firebase/firestore');
+const { getFirestore, collection, getDocs, addDoc, doc, deleteDoc } = require('firebase/firestore');
 
 // Tu configuración de Firebase
 const firebaseConfig = {
@@ -39,7 +39,7 @@ module.exports = async (req, res) => {
 
     if (!isAdmin) return res.redirect('/api/acceso');
 
-    // 2. Manejar POST (Crear nueva observación)
+    // 2. Manejar POST (Crear o Eliminar observación)
     if (req.method === 'POST') {
         const action = req.body.action;
 
@@ -78,6 +78,15 @@ module.exports = async (req, res) => {
                     });
                 } catch (webhookErr) {
                     console.error('Error enviando webhook de nueva observación:', webhookErr);
+                }
+            }
+        } else if (action === 'eliminar_observacion') {
+            const obsId = req.body.obsId;
+            if (obsId) {
+                try {
+                    await deleteDoc(doc(db, 'observaciones', obsId));
+                } catch (dbErr) {
+                    console.error('Error eliminando observación de Firestore:', dbErr);
                 }
             }
         }
@@ -178,17 +187,24 @@ module.exports = async (req, res) => {
                             </div>
                         </div>
 
-                        <!-- Desplegable para ver observaciones y añadir nueva -->
+                        <!-- Desplegable para ver observaciones, eliminar y añadir nueva -->
                         <details style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
                             <summary style="cursor:pointer; font-weight:bold; color:#2980b9;">Ver observaciones y añadir nueva</summary>
                             
                             <div style="margin-top: 10px; display: grid; gap: 10px;">
                                 <h4 style="margin: 5px 0; color: #333;">Observaciones registradas:</h4>
                                 ${u.observaciones.map(obs => `
-                                    <div style="background: #f9f9f9; padding: 10px; border-radius: 6px; border-left: 4px solid ${obs.nota > 0 ? '#27ae60' : '#e67e22'}; font-size: 13px;">
-                                        <p style="margin: 0 0 3px 0;"><b>Motivo:</b> ${obs.motivo}</p>
-                                        <p style="margin: 0 0 3px 0;"><b>Nota:</b> ${obs.nota} | <b>Tipo:</b> ${obs.tipo} | <b>Instructor:</b> ${obs.instructor}</p>
-                                        <p style="margin: 0; color: #7f8c8d; font-size: 11px;">Fecha: ${obs.fechaRegistro}</p>
+                                    <div style="background: #f9f9f9; padding: 10px; border-radius: 6px; border-left: 4px solid ${obs.nota > 0 ? '#27ae60' : '#e67e22'}; font-size: 13px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                                        <div style="flex:1;">
+                                            <p style="margin: 0 0 3px 0;"><b>Motivo:</b> ${obs.motivo}</p>
+                                            <p style="margin: 0 0 3px 0;"><b>Nota:</b> ${obs.nota} | <b>Tipo:</b> ${obs.tipo} | <b>Instructor:</b> ${obs.instructor}</p>
+                                            <p style="margin: 0; color: #7f8c8d; font-size: 11px;">Fecha: ${obs.fechaRegistro}</p>
+                                        </div>
+                                        <form method="POST" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta observación?');">
+                                            <input type="hidden" name="action" value="eliminar_observacion">
+                                            <input type="hidden" name="obsId" value="${obs.id}">
+                                            <button type="submit" style="background:#c0392b; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:11px;">Eliminar</button>
+                                        </form>
                                     </div>
                                 `).join('')}
 
