@@ -55,7 +55,7 @@ module.exports = async (req, res) => {
 
     const nombreUsuario = cookies.username || 'Desconocido';
 
-    // 2. Manejar acciones POST (Aceptar, Rechazar con motivo o Eliminar apelación)
+    // 2. Manejar acciones POST
     if (req.method === 'POST') {
         const body = await parseBody(req);
         const action = body.action;
@@ -108,20 +108,36 @@ module.exports = async (req, res) => {
         console.error('Error leyendo apelaciones:', err);
     }
 
-    // 4. Renderizar el panel HTML con campo obligatorio para el motivo de resolución
+    // 4. Renderizar el panel HTML
     res.setHeader('Content-Type', 'text/html');
     res.send(`
         <html>
         <head>
             <title>Gestionar Apelaciones a Superiores</title>
             <script>
-                function bloquearBotones(form) {
+                function enviarAccion(btn, accion) {
+                    const form = btn.closest('form');
+                    const motivoInput = form.querySelector('input[name="motivoResolucion"]');
+                    
+                    // Validar que el motivo sea obligatorio si se va a aceptar o rechazar
+                    if (accion !== 'eliminar' && motivoInput && !motivoInput.value.trim()) {
+                        alert('Por favor, introduce el motivo de la resolución antes de aceptar o rechazar.');
+                        motivoInput.focus();
+                        return;
+                    }
+
+                    // Asignar la acción al input oculto
+                    form.querySelector('input[name="action"]').value = accion;
+
+                    // Bloquear botones y mostrar estado
                     const botones = form.querySelectorAll('button');
                     botones.forEach(b => {
                         b.disabled = true;
                         b.style.opacity = '0.5';
                         b.innerText = 'Procesando...';
                     });
+
+                    form.submit();
                 }
             </script>
             <style>
@@ -170,18 +186,19 @@ module.exports = async (req, res) => {
                             <p style="margin:5px 0;"><b>Estado:</b> <span class="badge ${badgeClass}">${estado}</span> ${a.revisadoPor ? `(por ${a.revisadoPor})` : ''}</p>
                             ${a.motivoResolucion ? `<p style="margin:5px 0; color: #2c3e50;"><b>Motivo de Resolución:</b> ${a.motivoResolucion}</p>` : ''}
                             
-                            <form method="POST" onsubmit="bloquearBotones(this)">
+                            <form method="POST">
                                 <input type="hidden" name="docId" value="${a.id}">
+                                <input type="hidden" name="action" value="">
                                 
                                 <div class="form-group">
-                                    <label>Motivo de la Resolución (Obligatorio):</label>
-                                    <input type="text" name="motivoResolucion" value="${a.motivoResolucion || ''}" placeholder="Escribe el por qué de la decisión..." required>
+                                    <label>Motivo de la Resolución (Obligatorio para Aceptar/Rechazar):</label>
+                                    <input type="text" name="motivoResolucion" value="${a.motivoResolucion || ''}" placeholder="Escribe el por qué de la decisión...">
                                 </div>
 
                                 <div class="actions">
-                                    <button type="submit" name="action" value="aceptar" class="btn-aceptar">Aceptar Apelación</button>
-                                    <button type="submit" name="action" value="rechazar" class="btn-rechazar">Rechazar Apelación</button>
-                                    <button type="submit" name="action" value="eliminar" class="btn-eliminar">Eliminar de la BD</button>
+                                    <button type="button" onclick="enviarAccion(this, 'aceptar')" class="btn-aceptar">Aceptar Apelación</button>
+                                    <button type="button" onclick="enviarAccion(this, 'rechazar')" class="btn-rechazar">Rechazar Apelación</button>
+                                    <button type="button" onclick="enviarAccion(this, 'eliminar')" class="btn-eliminar">Eliminar de la BD</button>
                                 </div>
                             </form>
                         </div>
