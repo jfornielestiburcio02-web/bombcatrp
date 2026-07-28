@@ -79,6 +79,7 @@ app.all('/api/admin/otros', require('./api/admin/otros'));
 app.all('/api/admin/comunicAdos', require('./api/admin/comunicAdos'));
 app.all('/api/admin/verServiciosTodos', require('./api/admin/verServiciosTodos'));
 app.all('/api/admin/despedir', require('./api/admin/despedir'));
+app.all('/api/admin/verificarAprobaciones', require('./api/admin/verificarAprobaciones'));
 app.all('/api/admin/ponFal', require('./api/admin/ponFal'));
 
 // Mantener el servidor abierto en el puerto que asigne Render
