@@ -1,6 +1,6 @@
-const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, query, where, getDocs } = require('firebase/firestore');
 const { parse } = require('cookie');
+const { initializeApp, getApps } = require('firebase/app');
+const { getFirestore, collection, getDocs, query, where, doc, getDoc } = require('firebase/firestore');
 
 const firebaseConfig = {
     apiKey: "AIzaSyAcBmdyP0rJE7x0FQxIp4FEnKuTsO5wH14",
@@ -11,139 +11,153 @@ const firebaseConfig = {
     appId: "1:286186204549:web:cc707dcc23cc664f1c28ec"
 };
 
-const db = getFirestore(initializeApp(firebaseConfig));
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const db = getFirestore(app);
+
+function formatearTipoSancion(tipo) {
+    if (!tipo) return 'N/A';
+    const t = tipo.toLowerCase().trim();
+    if (t.includes('leve')) return 'Leve (21)';
+    if (t.includes('moderada')) return 'Moderada (21)';
+    if (t.includes('grave')) return 'Grave (31)';
+    return tipo;
+}
 
 module.exports = async (req, res) => {
     const cookies = parse(req.headers.cookie || '');
     if (!cookies.uid) return res.redirect('/api/login');
 
-    // 1. Consultar sanciones del usuario
-    const qSanciones = query(collection(db, 'sanciones'), where("usuarioId", "==", cookies.uid));
-    const snapshotSanciones = await getDocs(qSanciones);
+    const userId = cookies.uid;
+    const nombreUsuario = cookies.username || 'Usuario';
 
-    // 2. Consultar apelaciones existentes en revisionASuperiores
-    const qRevisiones = query(collection(db, 'revisionASuperiores'), where("usuarioId", "==", cookies.uid));
-    const snapshotRevisiones = await getDocs(qRevisiones);
-    
-    const apelacionesMap = {};
-    snapshotRevisiones.forEach(docSnap => {
-        const data = docSnap.data();
-        if (data.sancionId) {
-            apelacionesMap[data.sancionId] = true;
-        }
-    });
-    
-    let html = `
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <style>
-            body { font-family: sans-serif; background-color: #f4f7f9; padding: 20px; color: #333; }
-            .container { max-width: 600px; margin: auto; }
-            .card { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 5px solid #e74c3c; }
-            .row { margin-bottom: 5px; }
-            .label { font-weight: bold; color: #555; }
-            .back-btn { display: inline-block; margin-bottom: 15px; color: #34495e; text-decoration: none; font-weight: bold; }
-            .btn-apelar { 
-                display: inline-block; 
-                margin-top: 10px; 
-                padding: 8px 15px; 
-                background-color: #3498db; 
-                color: white; 
-                text-decoration: none; 
-                border-radius: 4px; 
-                font-weight: bold; 
-            }
-            .btn-apelar.disabled { 
-                background-color: #bdc3c7; 
-                pointer-events: none; 
-                cursor: not-allowed; 
-            }
-            .status-text { 
-                margin-top: 8px; 
-                font-size: 0.9em; 
-                color: #e67e22; 
-                font-weight: bold; 
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <a href="/api/acceso" class="back-btn">← Volver al panel</a>
-            <h1>Portal de Apelaciones</h1>
-    `;
+    let misApelaciones = [];
+    try {
+        const q = query(collection(db, 'revisionASuperiores'), where('usuarioId', '==', userId));
+        const querySnapshot = await getDocs(q);
+        for (const document of querySnapshot.docs) {
+            const data = document.data();
+            let tipoSancion = 'N/A';
 
-    if (snapshotSanciones.empty) {
-        html += `<p>No tienes sanciones registradas.</p>`;
-    } else {
-        const now = new Date();
-
-        snapshotSanciones.forEach(docSnap => {
-            const d = docSnap.data();
-            const docId = docSnap.id;
-
-            let fechaSancion = null;
-            let fechaStr = 'N/A';
-
-            if (d.fechaRegistro) {
-                if (typeof d.fechaRegistro === 'object' && d.fechaRegistro.seconds) {
-                    fechaSancion = new Date(d.fechaRegistro.seconds * 1000);
-                    fechaStr = fechaSancion.toLocaleDateString();
-                } else if (typeof d.fechaRegistro === 'string') {
-                    fechaStr = d.fechaRegistro;
-                    const partes = d.fechaRegistro.split(',');
-                    if (partes.length > 0) {
-                        const fechaPartes = partes[0].trim().split('/');
-                        if (fechaPartes.length === 3) {
-                            fechaSancion = new Date(`${fechaPartes[2]}-${fechaPartes[1].padStart(2, '0')}-${fechaPartes[0].padStart(2, '0')}`);
-                        }
+            if (data.sancionId) {
+                try {
+                    const sancionDoc = await getDoc(doc(db, 'sanciones', String(data.sancionId)));
+                    if (sancionDoc.exists()) {
+                        tipoSancion = sancionDoc.data().tipo || 'N/A';
                     }
+                } catch (e) {
+                    console.error('Error buscando sanción:', e);
                 }
             }
 
-            const tipoSancion = (d.tipo || '').toLowerCase();
-            let diasNecesarios = (tipoSancion === 'grave') ? 31 : 21;
-
-            let habilitado = false;
-            let mensajeEstado = '';
-
-            if (fechaSancion && !isNaN(fechaSancion.getTime())) {
-                const tiempoRestantesMs = now - fechaSancion;
-                const diasPasados = tiempoRestantesMs / (1000 * 60 * 60 * 24);
-
-                if (diasPasados >= diasNecesarios) {
-                    habilitado = true;
-                } else {
-                    const diasFaltantes = Math.ceil(diasNecesarios - diasPasados);
-                    mensajeEstado = `Apelar en ${diasFaltantes} ${diasFaltantes === 1 ? 'día' : 'días'}`;
-                }
-            } else {
-                mensajeEstado = `Apelar en ${diasNecesarios} días`;
-            }
-
-            if (habilitado) {
-                mensajeEstado = `¡Ya puedes apelar!`;
-            }
-
-            // Si ya existe una apelación enviada para esta sanción
-            if (apelacionesMap[docId]) {
-                mensajeEstado = "Resolución Pendiente...";
-                habilitado = false;
-            }
-
-            html += `
-                <div class="card">
-                    <div class="row"><span class="label">Tipo:</span> ${d.tipo || 'N/A'}</div>
-                    <div class="row"><span class="label">Motivo:</span> ${d.motivo || 'N/A'}</div>
-                    <div class="row"><span class="label">Instructor:</span> ${d.instructor || 'N/A'}</div>
-                    <div class="row"><span class="label">Fecha:</span> ${fechaStr}</div>
-                    <div class="status-text">${mensajeEstado}</div>
-                    <a href="/api/apelaSancion?id=${docId}" class="btn-apelar ${habilitado ? '' : 'disabled'}">Apelar</a>
-                </div>
-            `;
-        });
+            misApelaciones.push({
+                id: document.id,
+                ...data,
+                tipoSancionFormateada: formatearTipoSancion(tipoSancion)
+            });
+        }
+    } catch (err) {
+        console.error('Error leyendo las apelaciones del usuario:', err);
     }
 
-    html += `</div></body></html>`;
-    res.send(html);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(`
+        <html>
+        <head>
+            <title>Mis Apelaciones a Superiores</title>
+            <style>
+                body { 
+                    font-family: sans-serif; 
+                    text-align: center; 
+                    padding: 30px; 
+                    background: #15151f; 
+                    color: #e0e0e6; 
+                }
+                .container { 
+                    display: grid; 
+                    gap: 20px; 
+                    max-width: 700px; 
+                    margin: auto; 
+                    text-align: left; 
+                }
+                .card { 
+                    background: #1e1e2d; 
+                    padding: 20px; 
+                    border-radius: 8px; 
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+                    border-left: 5px solid #3498db; 
+                }
+                .card.aceptada { border-left-color: #2ecc71; }
+                .card.rechazada { border-left-color: #e74c3c; }
+                
+                .badge { 
+                    display: inline-block; 
+                    padding: 4px 8px; 
+                    border-radius: 4px; 
+                    font-size: 0.85em; 
+                    font-weight: bold; 
+                }
+                .badge.pendiente { background: #f39c12; color: white; }
+                .badge.aceptada { background: #2ecc71; color: white; }
+                .badge.rechazada { background: #e74c3c; color: white; }
+                .badge-tipo { background: #34495e; color: #ecf0f1; padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; }
+                
+                .response-box {
+                    background: #252538;
+                    padding: 12px;
+                    border-radius: 6px;
+                    margin-top: 10px;
+                    border: 1px solid #33334d;
+                }
+                
+                a {
+                    color: #3498db;
+                    text-decoration: none;
+                }
+                a:hover {
+                    text-decoration: underline;
+                }
+            </style>
+        </head>
+        <body>
+            <h2>Estado de tus Apelaciones</h2>
+            <p style="color: #a0a0b0;">Consultando solicitudes para: <b>${nombreUsuario}</b></p>
+            <hr style="margin: 20px auto; width: 60%; border: 1px solid #2d2d42;">
+            
+            ${misApelaciones.length === 0 ? '<p style="color:#8a8a9e;">No tienes ninguna apelación registrada en este momento.</p>' : ''}
+
+            <div class="container">
+                ${misApelaciones.map(a => {
+                    const estado = a.estadoResolucion || 'Pendiente';
+                    let badgeClass = 'pendiente';
+                    if (estado === 'Aceptada') badgeClass = 'aceptada';
+                    if (estado === 'Rechazada') badgeClass = 'rechazada';
+
+                    return `
+                        <div class="card ${estado.toLowerCase()}">
+                            <p style="margin:5px 0;"><b>ID de Sanción:</b> ${a.sancionId || 'N/A'}</p>
+                            <p style="margin:5px 0;"><b>Tipo de Sanción:</b> <span class="badge-tipo">${a.tipoSancionFormateada}</span></p>
+                            <p style="margin:5px 0;"><b>Motivo de Apelación:</b> ${a.motivo || 'N/A'}</p>
+                            <p style="margin:5px 0;"><b>Detalles:</b> ${a.detalles || 'N/A'}</p>
+                            <p style="margin:5px 0;"><b>Fecha de Envío:</b> ${a.fechaRegistro || 'N/A'}</p>
+                            <p style="margin:10px 0 5px 0;"><b>Resultado:</b> <span class="badge ${badgeClass}">${estado}</span></p>
+                            
+                            ${estado !== 'Pendiente' ? `
+                                <div class="response-box">
+                                    <p style="margin:0 0 5px 0; color: #fff;"><b>Respuesta del Staff (${a.revisadoPor || 'Administración'}):</b></p>
+                                    <p style="margin:0; color: #b0b0c2;">${a.motivoResolucion || 'Sin motivo especificado.'}</p>
+                                    <p style="margin:5px 0 0 0; font-size: 0.8em; color: #7a7a99;">Fecha revisión: ${a.fechaRevision || 'N/A'}</p>
+                                </div>
+                            ` : `
+                                <p style="margin:5px 0; font-style: italic; color: #f39c12; font-size: 0.9em;">Tu apelación está siendo revisada por los superiores.</p>
+                            `}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+
+            <br><br>
+            <a href="/api/perfil" style="padding:12px 25px; background:#2c3e50; color:white; border-radius:4px; font-weight:bold;">Volver al panel / perfil</a>
+        </body>
+        </html>
+    `);
 };
