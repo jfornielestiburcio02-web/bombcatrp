@@ -14,27 +14,6 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const db = getFirestore(app);
 
-function parseFecha(fechaStr) {
-    if (!fechaStr) return new Date(0);
-    try {
-        const partes = fechaStr.split(',');
-        const fechaPart = partes[0].trim();
-        const [dia, mes, anio] = fechaPart.split('/').map(Number);
-        const horaPart = partes[1] ? partes[1].trim() : '00:00:00';
-        const [hora, min, sec] = horaPart.split(':').map(Number);
-        return new Date(anio, mes - 1, dia, hora || 0, min || 0, sec || 0);
-    } catch (e) {
-        return new Date(0);
-    }
-}
-
-function obtenerDiasLimite(tipo) {
-    if (!tipo) return 21;
-    const t = tipo.toLowerCase().trim();
-    if (t.includes('grave')) return 31;
-    return 21; // Leve o Moderada
-}
-
 function formatearTipoSancion(tipo) {
     if (!tipo) return 'N/A';
     const t = tipo.toLowerCase().trim();
@@ -55,7 +34,7 @@ module.exports = async (req, res) => {
     let apelacionesMap = {};
 
     try {
-        // 1. Obtener apelaciones del usuario para mapearlas
+        // 1. Obtener apelaciones del usuario
         const qApelaciones = query(collection(db, 'revisionASuperiores'), where('usuarioId', '==', userId));
         const apSnap = await getDocs(qApelaciones);
         apSnap.forEach(docSnap => {
@@ -69,26 +48,16 @@ module.exports = async (req, res) => {
         const qSanciones = query(collection(db, 'sanciones'), where('usuarioId', '==', userId));
         const sancSnap = await getDocs(qSanciones);
 
-        const ahora = new Date();
-
         sancSnap.forEach(docSnap => {
             const sancionId = docSnap.id;
             const data = docSnap.data();
             const tipo = data.tipo || 'Leve';
-            const diasLimite = obtenerDiasLimite(tipo);
-            
-            const fechaSancion = parseFecha(data.fechaRegistro);
-            const diferenciaMs = ahora - fechaSancion;
-            const diasTranscurridos = diferenciaMs / (1000 * 60 * 60 * 24);
-            const plazoExpirado = diasTranscurridos > diasLimite;
 
             sancionesList.push({
                 id: sancionId,
                 ...data,
                 tipoSancionFormateada: formatearTipoSancion(tipo),
-                apelacion: apelacionesMap[sancionId] || null,
-                plazoExpirado: plazoExpirado,
-                diasLimite: diasLimite
+                apelacion: apelacionesMap[sancionId] || null
             });
         });
     } catch (err) {
@@ -99,7 +68,7 @@ module.exports = async (req, res) => {
     res.send(`
         <html>
         <head>
-            <title>Gestión de Sanciones y Apelaciones</title>
+            <title>Mis Sanciones y Apelaciones</title>
             <style>
                 body { 
                     font-family: sans-serif; 
@@ -126,7 +95,6 @@ module.exports = async (req, res) => {
                 .card.aceptada { border-left-color: #2ecc71; }
                 .card.rechazada { border-left-color: #e74c3c; }
                 .card.pendiente { border-left-color: #f39c12; }
-                .card.expirada { border-left-color: #95a5a6; opacity: 0.9; }
                 
                 .badge { 
                     display: inline-block; 
@@ -138,7 +106,6 @@ module.exports = async (req, res) => {
                 .badge.pendiente { background: #f39c12; color: white; }
                 .badge.aceptada { background: #2ecc71; color: white; }
                 .badge.rechazada { background: #e74c3c; color: white; }
-                .badge.expirado { background: #95a5a6; color: white; }
                 .badge-tipo { background: #e0e0e0; color: #333333; padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; }
                 
                 .response-box {
@@ -175,21 +142,16 @@ module.exports = async (req, res) => {
             <div class="container">
                 ${sancionesList.map(item => {
                     const ap = item.apelacion;
-                    let estadoCardClass = 'expirada';
-                    let estadoTexto = '';
+                    let estadoCardClass = 'pendiente';
+                    let estadoTexto = 'Pendiente';
 
                     if (ap) {
                         estadoTexto = ap.estadoResolucion || 'Pendiente';
                         estadoCardClass = estadoTexto.toLowerCase();
-                    } else if (!item.plazoExpirado) {
-                        estadoCardClass = 'pendiente';
-                        estadoTexto = 'Habilitado para Apelar';
-                    } else {
-                        estadoTexto = 'Plazo Expirado';
                     }
 
                     return `
-                        <div class="card ${estadoCardClass}">
+                        <div class="card ${ap ? estadoCardClass : 'pendiente'}">
                             <p style="margin:5px 0;"><b>ID de Sanción:</b> ${item.id}</p>
                             <p style="margin:5px 0;"><b>Tipo de Sanción:</b> <span class="badge-tipo">${item.tipoSancionFormateada}</span></p>
                             <p style="margin:5px 0;"><b>Motivo:</b> ${item.motivo || 'N/A'}</p>
@@ -197,8 +159,7 @@ module.exports = async (req, res) => {
                             <p style="margin:5px 0;"><b>Fecha de Sanción:</b> ${item.fechaRegistro || 'N/A'}</p>
                             
                             <p style="margin:10px 0 5px 0;"><b>Estado:</b> 
-                                ${ap ? `<span class="badge ${ap.estadoResolucion ? ap.estadoResolucion.toLowerCase() : 'pendiente'}">${ap.estadoResolucion || 'Pendiente'}</span>` : 
-                                  (!item.plazoExpirado ? `<span class="badge pendiente">Disponible</span>` : `<span class="badge expirado">Plazo Expirado (${item.diasLimite} días)</span>`)}
+                                ${ap ? `<span class="badge ${estadoCardClass}">${estadoTexto}</span>` : `<span class="badge pendiente">Disponible para Apelar</span>`}
                             </p>
 
                             ${ap ? `
@@ -207,13 +168,9 @@ module.exports = async (req, res) => {
                                     <p style="margin:0; color: #444;">${ap.motivoResolucion || 'Pendiente de revisión por superiores.'}</p>
                                     <p style="margin:5px 0 0 0; font-size: 0.8em; color: #666;">Fecha revisión: ${ap.fechaRevision || 'Pendiente'}</p>
                                 </div>
-                            ` : (
-                                !item.plazoExpirado ? `
-                                    <a href="/api/crear-apelacion?sancionId=${item.id}" class="btn-apelar">Apelar Sanción</a>
-                                ` : `
-                                    <p style="margin:8px 0 0 0; font-size: 0.85em; color: #c0392b; font-style: italic;">El plazo de ${item.diasLimite} días para apelar esta sanción ha finalizado.</p>
-                                `
-                            )}
+                            ` : `
+                                <a href="/api/crear-apelacion?sancionId=${item.id}" class="btn-apelar">Apelar Sanción</a>
+                            `}
                         </div>
                     `;
                 }).join('')}
