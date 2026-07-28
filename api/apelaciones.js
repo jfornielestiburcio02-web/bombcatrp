@@ -69,8 +69,8 @@ module.exports = async (req, res) => {
                     font-family: sans-serif; 
                     text-align: center; 
                     padding: 30px; 
-                    background: #15151f; 
-                    color: #e0e0e6; 
+                    background: #ffffff; 
+                    color: #222222; 
                 }
                 .container { 
                     display: grid; 
@@ -80,10 +80,11 @@ module.exports = async (req, res) => {
                     text-align: left; 
                 }
                 .card { 
-                    background: #1e1e2d; 
+                    background: #f9f9f9; 
                     padding: 20px; 
                     border-radius: 8px; 
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+                    border: 1px solid #e0e0e0;
                     border-left: 5px solid #3498db; 
                 }
                 .card.aceptada { border-left-color: #2ecc71; }
@@ -99,14 +100,14 @@ module.exports = async (req, res) => {
                 .badge.pendiente { background: #f39c12; color: white; }
                 .badge.aceptada { background: #2ecc71; color: white; }
                 .badge.rechazada { background: #e74c3c; color: white; }
-                .badge-tipo { background: #34495e; color: #ecf0f1; padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; }
+                .badge-tipo { background: #e0e0e0; color: #333333; padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; }
                 
                 .response-box {
-                    background: #252538;
+                    background: #f1f1f1;
                     padding: 12px;
                     border-radius: 6px;
                     margin-top: 10px;
-                    border: 1px solid #33334d;
+                    border: 1px solid #ddd;
                 }
                 
                 a {
@@ -120,10 +121,10 @@ module.exports = async (req, res) => {
         </head>
         <body>
             <h2>Estado de tus Apelaciones</h2>
-            <p style="color: #a0a0b0;">Consultando solicitudes para: <b>${nombreUsuario}</b></p>
-            <hr style="margin: 20px auto; width: 60%; border: 1px solid #2d2d42;">
+            <p style="color: #666666;">Consultando solicitudes para: <b>${nombreUsuario}</b></p>
+            <hr style="margin: 20px auto; width: 60%; border: 1px solid #dddddd;">
             
-            ${misApelaciones.length === 0 ? '<p style="color:#8a8a9e;">No tienes ninguna apelación registrada en este momento.</p>' : ''}
+            ${misApelaciones.length === 0 ? '<p style="color:#666666;">No tienes ninguna apelación registrada en este momento.</p>' : ''}
 
             <div class="container">
                 ${misApelaciones.map(a => {
@@ -143,12 +144,12 @@ module.exports = async (req, res) => {
                             
                             ${estado !== 'Pendiente' ? `
                                 <div class="response-box">
-                                    <p style="margin:0 0 5px 0; color: #fff;"><b>Respuesta del Staff (${a.revisadoPor || 'Administración'}):</b></p>
-                                    <p style="margin:0; color: #b0b0c2;">${a.motivoResolucion || 'Sin motivo especificado.'}</p>
-                                    <p style="margin:5px 0 0 0; font-size: 0.8em; color: #7a7a99;">Fecha revisión: ${a.fechaRevision || 'N/A'}</p>
+                                    <p style="margin:0 0 5px 0; color: #111;"><b>Respuesta del Staff (${a.revisadoPor || 'Administración'}):</b></p>
+                                    <p style="margin:0; color: #444;">${a.motivoResolucion || 'Sin motivo especificado.'}</p>
+                                    <p style="margin:5px 0 0 0; font-size: 0.8em; color: #666;">Fecha revisión: ${a.fechaRevision || 'N/A'}</p>
                                 </div>
                             ` : `
-                                <p style="margin:5px 0; font-style: italic; color: #f39c12; font-size: 0.9em;">Tu apelación está siendo revisada por los superiores.</p>
+                                <p style="margin:5px 0; font-style: italic; color: #d68910; font-size: 0.9em;">Tu apelación está siendo revisada por los superiores.</p>
                             `}
                         </div>
                     `;
