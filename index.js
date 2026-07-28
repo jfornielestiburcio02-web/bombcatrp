@@ -68,6 +68,7 @@ app.all('/api/logout', require('./api/logout'));
 app.all('/api/nota_entrada', require('./api/nota_entrada'));
 app.all('/api/observaciones', require('./api/observaciones'));
 app.all('/api/mis-servicios', require('./api/mis-servicios'));
+app.all('/api/apelaciones', require('./api/apelaciones'));
 app.all('/api/sanciones', require('./api/sanciones'));
 
 // 3. Conectar las sub-rutas de la carpeta /api/admin/
