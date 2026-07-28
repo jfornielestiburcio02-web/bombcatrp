@@ -17,8 +17,21 @@ module.exports = async (req, res) => {
     const cookies = parse(req.headers.cookie || '');
     if (!cookies.uid) return res.redirect('/api/login');
 
-    const q = query(collection(db, 'sanciones'), where("usuarioId", "==", cookies.uid));
-    const snapshot = await getDocs(q);
+    // 1. Consultar sanciones del usuario
+    const qSanciones = query(collection(db, 'sanciones'), where("usuarioId", "==", cookies.uid));
+    const snapshotSanciones = await getDocs(qSanciones);
+
+    // 2. Consultar apelaciones existentes en revisionASuperiores
+    const qRevisiones = query(collection(db, 'revisionASuperiores'), where("usuarioId", "==", cookies.uid));
+    const snapshotRevisiones = await getDocs(qRevisiones);
+    
+    const apelacionesMap = {};
+    snapshotRevisiones.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.sancionId) {
+            apelacionesMap[data.sancionId] = true;
+        }
+    });
     
     let html = `
     <html>
@@ -60,16 +73,15 @@ module.exports = async (req, res) => {
             <h1>Portal de Apelaciones</h1>
     `;
 
-    if (snapshot.empty) {
-        html += `<p>No tienes sanciones registradas para apelar.</p>`;
+    if (snapshotSanciones.empty) {
+        html += `<p>No tienes sanciones registradas.</p>`;
     } else {
         const now = new Date();
 
-        snapshot.forEach(docSnap => {
+        snapshotSanciones.forEach(docSnap => {
             const d = docSnap.data();
             const docId = docSnap.id;
 
-            // Manejo de fechaRegistro (soporta tanto Timestamp de Firestore como String "26/7/2026, 21:30:47")
             let fechaSancion = null;
             let fechaStr = 'N/A';
 
@@ -78,7 +90,6 @@ module.exports = async (req, res) => {
                     fechaSancion = new Date(d.fechaRegistro.seconds * 1000);
                     fechaStr = fechaSancion.toLocaleDateString();
                 } else if (typeof d.fechaRegistro === 'string') {
-                    // Intento de parseo si viene como string tipo "26/7/2026, 21:30:47"
                     fechaStr = d.fechaRegistro;
                     const partes = d.fechaRegistro.split(',');
                     if (partes.length > 0) {
@@ -91,12 +102,7 @@ module.exports = async (req, res) => {
             }
 
             const tipoSancion = (d.tipo || '').toLowerCase();
-            
-            // Determinar días necesarios según el tipo
-            let diasNecesarios = 21; // por defecto para leve o moderada
-            if (tipoSancion === 'grave') {
-                diasNecesarios = 31;
-            }
+            let diasNecesarios = (tipoSancion === 'grave') ? 31 : 21;
 
             let habilitado = false;
             let mensajeEstado = '';
@@ -117,6 +123,12 @@ module.exports = async (req, res) => {
 
             if (habilitado) {
                 mensajeEstado = `¡Ya puedes apelar!`;
+            }
+
+            // Si ya existe una apelación enviada para esta sanción
+            if (apelacionesMap[docId]) {
+                mensajeEstado = "Resolución Pendiente...";
+                habilitado = false;
             }
 
             html += `
