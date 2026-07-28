@@ -40,7 +40,7 @@ module.exports = async (req, res) => {
     const sancionId = urlObj.searchParams.get('id');
 
     if (!sancionId) {
-        return res.redirect('/api/portalApelaciones');
+        return res.redirect('/api/apelaciones');
     }
 
     // Comprobar si ya existe una apelación enviada para esta sanción por este usuario
@@ -55,7 +55,7 @@ module.exports = async (req, res) => {
     // Procesar envío del formulario (POST)
     if (req.method === 'POST') {
         if (yaApeleo) {
-            return res.redirect('/api/portalApelaciones');
+            return res.redirect('/api/apelaSancion');
         }
 
         const body = await parseBody(req);
@@ -73,7 +73,7 @@ module.exports = async (req, res) => {
             fechaRegistro: new Date().toISOString()
         });
 
-        return res.redirect('/api/portalApelaciones');
+        return res.redirect('/api/apelaciones');
     }
 
     // Renderizar vista (GET)
