@@ -33,6 +33,7 @@ module.exports = async (req, res) => {
             <a href="/api/ascensos" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Ascensos / Descensos</a>
             <a href="/api/inactividades" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Inactividades</a>
             <a href="/api/mis-servicios" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Mis Servicios y Tablas</a>
+            <a href="/api/apelaciones" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">APELACIÓN DE SANCIONES</a>
             <a href="/api/nota_entrada" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Nota de entrada (Inicial)</a>
             
             ${isAdmin ? `<a href="/api/administracion" style="padding:15px; background:#c0392b; color:white; text-decoration:none;">Acceso Altos Cargos</a>` : ''}
