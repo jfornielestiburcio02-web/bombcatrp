@@ -23,6 +23,18 @@ function formatearTipoSancion(tipo) {
     return tipo;
 }
 
+function formatearFecha(fecha) {
+    if (!fecha) return 'N/A';
+    if (typeof fecha === 'string') return fecha;
+    if (fecha && typeof fecha.toDate === 'function') {
+        return fecha.toDate().toLocaleString();
+    }
+    if (fecha && typeof fecha.seconds === 'number') {
+        return new Date(fecha.seconds * 1000).toLocaleString();
+    }
+    return String(fecha);
+}
+
 module.exports = async (req, res) => {
     const cookies = parse(req.headers.cookie || '');
     if (!cookies.uid) return res.redirect('/api/login');
@@ -57,6 +69,7 @@ module.exports = async (req, res) => {
                 id: sancionId,
                 ...data,
                 tipoSancionFormateada: formatearTipoSancion(tipo),
+                fechaFormateada: formatearFecha(data.fechaRegistro),
                 apelacion: apelacionesMap[sancionId] || null
             });
         });
@@ -156,7 +169,7 @@ module.exports = async (req, res) => {
                             <p style="margin:5px 0;"><b>Tipo de Sanción:</b> <span class="badge-tipo">${item.tipoSancionFormateada}</span></p>
                             <p style="margin:5px 0;"><b>Motivo:</b> ${item.motivo || 'N/A'}</p>
                             <p style="margin:5px 0;"><b>Instructor:</b> ${item.instructor || 'N/A'}</p>
-                            <p style="margin:5px 0;"><b>Fecha de Sanción:</b> ${item.fechaRegistro || 'N/A'}</p>
+                            <p style="margin:5px 0;"><b>Fecha de Sanción:</b> ${item.fechaFormateada}</p>
                             
                             <p style="margin:10px 0 5px 0;"><b>Estado:</b> 
                                 ${ap ? `<span class="badge ${estadoCardClass}">${estadoTexto}</span>` : `<span class="badge pendiente">Disponible para Apelar</span>`}
