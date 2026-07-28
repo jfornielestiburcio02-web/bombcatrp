@@ -253,7 +253,7 @@ module.exports = async (req, res) => {
                                 </div>
                             ` : (
                                 item.puedeApelar ? `
-                                    <a href="/api/crear-apelacion?sancionId=${item.id}" class="btn-apelar">Apelar Sanción</a>
+                                    <a href="/api/apelaSancion?sancionId=${item.id}" class="btn-apelar">Apelar Sanción</a>
                                 ` : `
                                     <p style="margin:8px 0 0 0; font-size: 0.85em; color: #c0392b; font-style: italic;">Debes esperar ${item.diasLimite} días desde la sanción para poder apelar. Te quedan ${item.diasRestantes} día(s).</p>
                                 `
@@ -264,7 +264,7 @@ module.exports = async (req, res) => {
             </div>
 
             <br><br>
-            <a href="/api/perfil" style="padding:12px 25px; background:#2c3e50; color:white; border-radius:4px; font-weight:bold;">Volver al panel / perfil</a>
+            <a href="/api/acceso" style="padding:12px 25px; background:#2c3e50; color:white; border-radius:4px; font-weight:bold;">Volver al panel</a>
         </body>
         </html>
     `);
