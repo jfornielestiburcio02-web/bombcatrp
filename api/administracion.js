@@ -34,6 +34,7 @@ module.exports = async (req, res) => {
             <a href="/api/admin/comunicAdos" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Comunicados desde la plataforma</a>
             <a href="/api/admin/verServiciosTodos" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;"> Servicios, tasas y resúmenes</a>
             <a href="/api/admin/despedir" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;"> Gestionar Expulsiones </a>
+            <a href="/api/admin/verificarAprobaciones" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;"> Apelaciones Enviadas </a>
             <a href="/api/admin/otros" style="padding:15px; background:#2c3e50; color:white; text-decoration:none;">Otras opciones</a>
             <br>
             <a href="/api/acceso" style="padding:15px; background:#7f8c8d; color:white; text-decoration:none;">Volver al panel general</a>
