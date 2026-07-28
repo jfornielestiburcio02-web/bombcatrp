@@ -39,25 +39,30 @@ module.exports = async (req, res) => {
     const urlObj = new URL(fullUrl);
     let sancionId = urlObj.searchParams.get('id');
 
-    if (!sancionId) {
-        return res.redirect('/api/apelaciones');
-    }
-
-    // Verificar si ya existe solicitud previa
-    const qCheck = query(
-        collection(db, 'revisionASuperiores'), 
-        where("sancionId", "==", sancionId), 
-        where("usuarioId", "==", cookies.uid)
-    );
-    const existingSnapshot = await getDocs(qCheck);
-    const yaApeleo = !existingSnapshot.empty;
-
+    // Si es POST, procesar el formulario
     if (req.method === 'POST') {
-        if (yaApeleo) {
+        const body = await parseBody(req);
+        
+        // Recuperar el ID del campo oculto si se perdió en la URL por el replaceState
+        if (!sancionId && body.sancionId) {
+            sancionId = body.sancionId;
+        }
+
+        if (!sancionId) {
             return res.redirect('/api/apelaciones');
         }
 
-        const body = await parseBody(req);
+        // Verificar si ya existe solicitud previa
+        const qCheck = query(
+            collection(db, 'revisionASuperiores'), 
+            where("sancionId", "==", sancionId), 
+            where("usuarioId", "==", cookies.uid)
+        );
+        const existingSnapshot = await getDocs(qCheck);
+        if (!existingSnapshot.empty) {
+            return res.redirect('/api/apelaciones');
+        }
+
         const motivo = body.motivo || '';
         const detalles = body.detalles || '';
         const notas = body.notas || '';
@@ -75,12 +80,25 @@ module.exports = async (req, res) => {
         return res.redirect('/api/apelaciones');
     }
 
+    if (!sancionId) {
+        return res.redirect('/api/apelaciones');
+    }
+
+    // Verificar si ya existe solicitud previa para mostrar mensaje de pendiente
+    const qCheck = query(
+        collection(db, 'revisionASuperiores'), 
+        where("sancionId", "==", sancionId), 
+        where("usuarioId", "==", cookies.uid)
+    );
+    const existingSnapshot = await getDocs(qCheck);
+    const yaApeleo = !existingSnapshot.empty;
+
     let html = `
     <html>
     <head>
         <meta charset="UTF-8">
         <script>
-            // Ocultar rápidamente el ?id de la URL para que quede limpio
+            // Ocultar rápidamente el ?id de la URL para que quede limpio en el navegador
             window.history.replaceState(null, '', window.location.pathname);
         </script>
         <style>
@@ -110,6 +128,7 @@ module.exports = async (req, res) => {
     } else {
         html += `
             <form method="POST">
+                <input type="hidden" name="sancionId" value="${sancionId}">
                 <div class="form-group">
                     <label>Justificar Por motivo:</label>
                     <textarea name="motivo" required placeholder="Escribe el motivo principal de tu apelación..."></textarea>
