@@ -65,7 +65,10 @@ function parseFecha(fecha) {
 }
 
 function obtenerDiasLimite(tipo) {
-    return 21; // Leve, Moderada y Grave usan el mismo plazo
+    if (!tipo) return 21;
+    const t = tipo.toLowerCase().trim();
+    if (t.includes('grave')) return 31;
+    return 21; // Leve o Moderada
 }
 
 function formatearTipoSancion(tipo) {
@@ -73,7 +76,7 @@ function formatearTipoSancion(tipo) {
     const t = tipo.toLowerCase().trim();
     if (t.includes('leve')) return 'Leve (21)';
     if (t.includes('moderada')) return 'Moderada (21)';
-    if (t.includes('grave')) return 'Grave (21)';
+    if (t.includes('grave')) return 'Grave (31)';
     return tipo;
 }
 
@@ -120,7 +123,8 @@ module.exports = async (req, res) => {
             const fechaSancion = parseFecha(data.fechaRegistro);
             const diferenciaMs = ahora - fechaSancion;
             const diasTranscurridos = diferenciaMs / (1000 * 60 * 60 * 24);
-            const plazoExpirado = diasTranscurridos > diasLimite;
+            const puedeApelar = diasTranscurridos >= diasLimite;
+            const diasRestantes = Math.max(0, Math.ceil(diasLimite - diasTranscurridos));
 
             sancionesList.push({
                 id: sancionId,
@@ -128,7 +132,8 @@ module.exports = async (req, res) => {
                 tipoSancionFormateada: formatearTipoSancion(tipo),
                 fechaFormateada: formatearFecha(data.fechaRegistro),
                 apelacion: apelacionesMap[sancionId] || null,
-                plazoExpirado: plazoExpirado,
+                puedeApelar: puedeApelar,
+                diasRestantes: diasRestantes,
                 diasLimite: diasLimite
             });
         });
@@ -221,7 +226,7 @@ module.exports = async (req, res) => {
                     if (ap) {
                         const estado = ap.estadoResolucion ? ap.estadoResolucion.toLowerCase() : 'pendiente';
                         estadoCardClass = estado;
-                    } else if (!item.plazoExpirado) {
+                    } else if (item.puedeApelar) {
                         estadoCardClass = 'pendiente';
                     } else {
                         estadoCardClass = 'expirada';
@@ -237,7 +242,7 @@ module.exports = async (req, res) => {
                             
                             <p style="margin:10px 0 5px 0;"><b>Estado / Plazo:</b> 
                                 ${ap ? `<span class="badge ${ap.estadoResolucion ? ap.estadoResolucion.toLowerCase() : 'pendiente'}">${ap.estadoResolucion || 'Pendiente'}</span>` : 
-                                  (!item.plazoExpirado ? `<span class="badge pendiente">Disponible para Apelar (${item.diasLimite} días)</span>` : `<span class="badge expirado">Plazo Expirado (${item.diasLimite} días)</span>`)}
+                                  (item.puedeApelar ? `<span class="badge pendiente">Disponible para Apelar (${item.diasLimite} días)</span>` : `<span class="badge expirado">En espera (${item.diasLimite} días)</span>`)}
                             </p>
 
                             ${ap ? `
@@ -247,10 +252,10 @@ module.exports = async (req, res) => {
                                     <p style="margin:5px 0 0 0; font-size: 0.8em; color: #666;">Fecha revisión: ${ap.fechaRevision || 'Pendiente'}</p>
                                 </div>
                             ` : (
-                                !item.plazoExpirado ? `
+                                item.puedeApelar ? `
                                     <a href="/api/crear-apelacion?sancionId=${item.id}" class="btn-apelar">Apelar Sanción</a>
                                 ` : `
-                                    <p style="margin:8px 0 0 0; font-size: 0.85em; color: #c0392b; font-style: italic;">El plazo de ${item.diasLimite} días para apelar esta sanción ha finalizado.</p>
+                                    <p style="margin:8px 0 0 0; font-size: 0.85em; color: #c0392b; font-style: italic;">Debes esperar ${item.diasLimite} días desde la sanción para poder apelar. Te quedan ${item.diasRestantes} día(s).</p>
                                 `
                             )}
                         </div>
