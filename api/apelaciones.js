@@ -65,10 +65,7 @@ function parseFecha(fecha) {
 }
 
 function obtenerDiasLimite(tipo) {
-    if (!tipo) return 21;
-    const t = tipo.toLowerCase().trim();
-    if (t.includes('grave')) return 31;
-    return 21; // Leve o Moderada
+    return 21; // Leve, Moderada y Grave usan el mismo plazo
 }
 
 function formatearTipoSancion(tipo) {
@@ -76,7 +73,7 @@ function formatearTipoSancion(tipo) {
     const t = tipo.toLowerCase().trim();
     if (t.includes('leve')) return 'Leve (21)';
     if (t.includes('moderada')) return 'Moderada (21)';
-    if (t.includes('grave')) return 'Grave (31)';
+    if (t.includes('grave')) return 'Grave (21)';
     return tipo;
 }
 
