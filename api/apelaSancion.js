@@ -13,7 +13,6 @@ const firebaseConfig = {
 
 const db = getFirestore(initializeApp(firebaseConfig));
 
-// Helper para parsear el body en peticiones POST (compatible con entornos serverless / Node puro)
 async function parseBody(req) {
     return new Promise((resolve) => {
         if (req.body) return resolve(req.body);
@@ -36,14 +35,15 @@ module.exports = async (req, res) => {
     const cookies = parse(req.headers.cookie || '');
     if (!cookies.uid) return res.redirect('/api/login');
 
-    const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-    const sancionId = urlObj.searchParams.get('id');
+    const fullUrl = req.url.startsWith('http') ? req.url : `http://${req.headers.host || 'localhost'}${req.url}`;
+    const urlObj = new URL(fullUrl);
+    let sancionId = urlObj.searchParams.get('id');
 
     if (!sancionId) {
         return res.redirect('/api/apelaciones');
     }
 
-    // Comprobar si ya existe una apelación enviada para esta sanción por este usuario
+    // Verificar si ya existe solicitud previa
     const qCheck = query(
         collection(db, 'revisionASuperiores'), 
         where("sancionId", "==", sancionId), 
@@ -52,10 +52,9 @@ module.exports = async (req, res) => {
     const existingSnapshot = await getDocs(qCheck);
     const yaApeleo = !existingSnapshot.empty;
 
-    // Procesar envío del formulario (POST)
     if (req.method === 'POST') {
         if (yaApeleo) {
-            return res.redirect('/api/apelaSancion');
+            return res.redirect('/api/apelaciones');
         }
 
         const body = await parseBody(req);
@@ -76,7 +75,6 @@ module.exports = async (req, res) => {
         return res.redirect('/api/apelaciones');
     }
 
-    // Renderizar vista (GET)
     let html = `
     <html>
     <head>
@@ -100,7 +98,7 @@ module.exports = async (req, res) => {
     </head>
     <body>
         <div class="container">
-            <a href="/api/portalApelaciones" class="back-btn">← Volver al Portal de Apelaciones</a>
+            <a href="/api/apelaciones" class="back-btn">← Volver al Portal de Apelaciones</a>
             <h1>Formulario de Apelación</h1>
     `;
 
