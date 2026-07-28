@@ -1,6 +1,6 @@
 const { parse } = require('cookie');
 const { initializeApp, getApps } = require('firebase/app');
-const { getFirestore, collection, getDocs, query, where, doc, getDoc } = require('firebase/firestore');
+const { getFirestore, collection, getDocs, query, where } = require('firebase/firestore');
 
 const firebaseConfig = {
     apiKey: "AIzaSyAcBmdyP0rJE7x0FQxIp4FEnKuTsO5wH14",
@@ -13,6 +13,27 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const db = getFirestore(app);
+
+function parseFecha(fechaStr) {
+    if (!fechaStr) return new Date(0);
+    try {
+        const partes = fechaStr.split(',');
+        const fechaPart = partes[0].trim();
+        const [dia, mes, anio] = fechaPart.split('/').map(Number);
+        const horaPart = partes[1] ? partes[1].trim() : '00:00:00';
+        const [hora, min, sec] = horaPart.split(':').map(Number);
+        return new Date(anio, mes - 1, dia, hora || 0, min || 0, sec || 0);
+    } catch (e) {
+        return new Date(0);
+    }
+}
+
+function obtenerDiasLimite(tipo) {
+    if (!tipo) return 21;
+    const t = tipo.toLowerCase().trim();
+    if (t.includes('grave')) return 31;
+    return 21; // Leve o Moderada
+}
 
 function formatearTipoSancion(tipo) {
     if (!tipo) return 'N/A';
@@ -30,40 +51,55 @@ module.exports = async (req, res) => {
     const userId = cookies.uid;
     const nombreUsuario = cookies.username || 'Usuario';
 
-    let misApelaciones = [];
+    let sancionesList = [];
+    let apelacionesMap = {};
+
     try {
-        const q = query(collection(db, 'revisionASuperiores'), where('usuarioId', '==', userId));
-        const querySnapshot = await getDocs(q);
-        for (const document of querySnapshot.docs) {
-            const data = document.data();
-            let tipoSancion = 'N/A';
-
+        // 1. Obtener apelaciones del usuario para mapearlas
+        const qApelaciones = query(collection(db, 'revisionASuperiores'), where('usuarioId', '==', userId));
+        const apSnap = await getDocs(qApelaciones);
+        apSnap.forEach(docSnap => {
+            const data = docSnap.data();
             if (data.sancionId) {
-                try {
-                    const sancionDoc = await getDoc(doc(db, 'sanciones', String(data.sancionId)));
-                    if (sancionDoc.exists()) {
-                        tipoSancion = sancionDoc.data().tipo || 'N/A';
-                    }
-                } catch (e) {
-                    console.error('Error buscando sanción:', e);
-                }
+                apelacionesMap[String(data.sancionId)] = { id: docSnap.id, ...data };
             }
+        });
 
-            misApelaciones.push({
-                id: document.id,
+        // 2. Obtener sanciones del usuario
+        const qSanciones = query(collection(db, 'sanciones'), where('usuarioId', '==', userId));
+        const sancSnap = await getDocs(qSanciones);
+
+        const ahora = new Date();
+
+        sancSnap.forEach(docSnap => {
+            const sancionId = docSnap.id;
+            const data = docSnap.data();
+            const tipo = data.tipo || 'Leve';
+            const diasLimite = obtenerDiasLimite(tipo);
+            
+            const fechaSancion = parseFecha(data.fechaRegistro);
+            const diferenciaMs = ahora - fechaSancion;
+            const diasTranscurridos = diferenciaMs / (1000 * 60 * 60 * 24);
+            const plazoExpirado = diasTranscurridos > diasLimite;
+
+            sancionesList.push({
+                id: sancionId,
                 ...data,
-                tipoSancionFormateada: formatearTipoSancion(tipoSancion)
+                tipoSancionFormateada: formatearTipoSancion(tipo),
+                apelacion: apelacionesMap[sancionId] || null,
+                plazoExpirado: plazoExpirado,
+                diasLimite: diasLimite
             });
-        }
+        });
     } catch (err) {
-        console.error('Error leyendo las apelaciones del usuario:', err);
+        console.error('Error leyendo sanciones o apelaciones:', err);
     }
 
     res.setHeader('Content-Type', 'text/html');
     res.send(`
         <html>
         <head>
-            <title>Mis Apelaciones a Superiores</title>
+            <title>Gestión de Sanciones y Apelaciones</title>
             <style>
                 body { 
                     font-family: sans-serif; 
@@ -75,7 +111,7 @@ module.exports = async (req, res) => {
                 .container { 
                     display: grid; 
                     gap: 20px; 
-                    max-width: 700px; 
+                    max-width: 750px; 
                     margin: auto; 
                     text-align: left; 
                 }
@@ -83,12 +119,14 @@ module.exports = async (req, res) => {
                     background: #f9f9f9; 
                     padding: 20px; 
                     border-radius: 8px; 
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.08); 
                     border: 1px solid #e0e0e0;
                     border-left: 5px solid #3498db; 
                 }
                 .card.aceptada { border-left-color: #2ecc71; }
                 .card.rechazada { border-left-color: #e74c3c; }
+                .card.pendiente { border-left-color: #f39c12; }
+                .card.expirada { border-left-color: #95a5a6; opacity: 0.9; }
                 
                 .badge { 
                     display: inline-block; 
@@ -100,6 +138,7 @@ module.exports = async (req, res) => {
                 .badge.pendiente { background: #f39c12; color: white; }
                 .badge.aceptada { background: #2ecc71; color: white; }
                 .badge.rechazada { background: #e74c3c; color: white; }
+                .badge.expirado { background: #95a5a6; color: white; }
                 .badge-tipo { background: #e0e0e0; color: #333333; padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; }
                 
                 .response-box {
@@ -110,47 +149,71 @@ module.exports = async (req, res) => {
                     border: 1px solid #ddd;
                 }
                 
-                a {
-                    color: #3498db;
+                .btn-apelar {
+                    display: inline-block;
+                    margin-top: 10px;
+                    padding: 8px 16px;
+                    background: #3498db;
+                    color: white;
+                    border-radius: 4px;
+                    font-weight: bold;
                     text-decoration: none;
                 }
-                a:hover {
-                    text-decoration: underline;
-                }
+                .btn-apelar:hover { background: #2980b9; }
+
+                a { color: #3498db; text-decoration: none; }
+                a:hover { text-decoration: underline; }
             </style>
         </head>
         <body>
-            <h2>Estado de tus Apelaciones</h2>
-            <p style="color: #666666;">Consultando solicitudes para: <b>${nombreUsuario}</b></p>
+            <h2>Tus Sanciones y Apelaciones</h2>
+            <p style="color: #666666;">Usuario conectado: <b>${nombreUsuario}</b></p>
             <hr style="margin: 20px auto; width: 60%; border: 1px solid #dddddd;">
             
-            ${misApelaciones.length === 0 ? '<p style="color:#666666;">No tienes ninguna apelación registrada en este momento.</p>' : ''}
+            ${sancionesList.length === 0 ? '<p style="color:#666666;">No tienes ninguna sanción registrada.</p>' : ''}
 
             <div class="container">
-                ${misApelaciones.map(a => {
-                    const estado = a.estadoResolucion || 'Pendiente';
-                    let badgeClass = 'pendiente';
-                    if (estado === 'Aceptada') badgeClass = 'aceptada';
-                    if (estado === 'Rechazada') badgeClass = 'rechazada';
+                ${sancionesList.map(item => {
+                    const ap = item.apelacion;
+                    let estadoCardClass = 'expirada';
+                    let estadoTexto = '';
+
+                    if (ap) {
+                        estadoTexto = ap.estadoResolucion || 'Pendiente';
+                        estadoCardClass = estadoTexto.toLowerCase();
+                    } else if (!item.plazoExpirado) {
+                        estadoCardClass = 'pendiente';
+                        estadoTexto = 'Habilitado para Apelar';
+                    } else {
+                        estadoTexto = 'Plazo Expirado';
+                    }
 
                     return `
-                        <div class="card ${estado.toLowerCase()}">
-                            <p style="margin:5px 0;"><b>ID de Sanción:</b> ${a.sancionId || 'N/A'}</p>
-                            <p style="margin:5px 0;"><b>Tipo de Sanción:</b> <span class="badge-tipo">${a.tipoSancionFormateada}</span></p>
-                            <p style="margin:5px 0;"><b>Motivo de Apelación:</b> ${a.motivo || 'N/A'}</p>
-                            <p style="margin:5px 0;"><b>Detalles:</b> ${a.detalles || 'N/A'}</p>
-                            <p style="margin:5px 0;"><b>Fecha de Envío:</b> ${a.fechaRegistro || 'N/A'}</p>
-                            <p style="margin:10px 0 5px 0;"><b>Resultado:</b> <span class="badge ${badgeClass}">${estado}</span></p>
+                        <div class="card ${estadoCardClass}">
+                            <p style="margin:5px 0;"><b>ID de Sanción:</b> ${item.id}</p>
+                            <p style="margin:5px 0;"><b>Tipo de Sanción:</b> <span class="badge-tipo">${item.tipoSancionFormateada}</span></p>
+                            <p style="margin:5px 0;"><b>Motivo:</b> ${item.motivo || 'N/A'}</p>
+                            <p style="margin:5px 0;"><b>Instructor:</b> ${item.instructor || 'N/A'}</p>
+                            <p style="margin:5px 0;"><b>Fecha de Sanción:</b> ${item.fechaRegistro || 'N/A'}</p>
                             
-                            ${estado !== 'Pendiente' ? `
+                            <p style="margin:10px 0 5px 0;"><b>Estado:</b> 
+                                ${ap ? `<span class="badge ${ap.estadoResolucion ? ap.estadoResolucion.toLowerCase() : 'pendiente'}">${ap.estadoResolucion || 'Pendiente'}</span>` : 
+                                  (!item.plazoExpirado ? `<span class="badge pendiente">Disponible</span>` : `<span class="badge expirado">Plazo Expirado (${item.diasLimite} días)</span>`)}
+                            </p>
+
+                            ${ap ? `
                                 <div class="response-box">
-                                    <p style="margin:0 0 5px 0; color: #111;"><b>Respuesta del Staff (${a.revisadoPor || 'Administración'}):</b></p>
-                                    <p style="margin:0; color: #444;">${a.motivoResolucion || 'Sin motivo especificado.'}</p>
-                                    <p style="margin:5px 0 0 0; font-size: 0.8em; color: #666;">Fecha revisión: ${a.fechaRevision || 'N/A'}</p>
+                                    <p style="margin:0 0 5px 0; color: #111;"><b>Respuesta del Staff (${ap.revisadoPor || 'Administración'}):</b></p>
+                                    <p style="margin:0; color: #444;">${ap.motivoResolucion || 'Pendiente de revisión por superiores.'}</p>
+                                    <p style="margin:5px 0 0 0; font-size: 0.8em; color: #666;">Fecha revisión: ${ap.fechaRevision || 'Pendiente'}</p>
                                 </div>
-                            ` : `
-                                <p style="margin:5px 0; font-style: italic; color: #d68910; font-size: 0.9em;">Tu apelación está siendo revisada por los superiores.</p>
-                            `}
+                            ` : (
+                                !item.plazoExpirado ? `
+                                    <a href="/api/crear-apelacion?sancionId=${item.id}" class="btn-apelar">Apelar Sanción</a>
+                                ` : `
+                                    <p style="margin:8px 0 0 0; font-size: 0.85em; color: #c0392b; font-style: italic;">El plazo de ${item.diasLimite} días para apelar esta sanción ha finalizado.</p>
+                                `
+                            )}
                         </div>
                     `;
                 }).join('')}
