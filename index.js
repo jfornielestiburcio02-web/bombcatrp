@@ -81,6 +81,7 @@ app.all('/api/admin/verServiciosTodos', require('./api/admin/verServiciosTodos')
 app.all('/api/admin/despedir', require('./api/admin/despedir'));
 app.all('/api/admin/verificarAprobaciones', require('./api/admin/verificarAprobaciones'));
 app.all('/api/admin/ponFal', require('./api/admin/ponFal'));
+app.all('/api/admin/tablaDatosMuestra', require('./api/admin/tablaDatosMuestra'));
 
 // Mantener el servidor abierto en el puerto que asigne Render
 const PORT = process.env.PORT || 10000;
