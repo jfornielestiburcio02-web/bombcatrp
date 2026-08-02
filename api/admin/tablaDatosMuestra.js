@@ -1,4 +1,3 @@
-
 const { parse } = require('cookie');
 const { initializeApp, getApps } = require('firebase/app');
 const { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, where } = require('firebase/firestore');
@@ -62,14 +61,14 @@ module.exports = async (req, res) => {
     const anio = parseInt(anioStr, 10);
     const mes = parseInt(mesStr, 10);
 
-    // 2. Manejar acciones POST (Crear o Eliminar justificación 'JUST')
+    // 2. Manejar acciones POST (Crear o Eliminar justificación 'JUST') de forma asíncrona sin redirección
     if (req.method === 'POST') {
-        const action = req.body.action;
+        const action = req.body?.action;
 
         if (action === 'toggleJust') {
             const usuarioId = req.body.usuarioId;
             const fechaDia = req.body.fecha; // YYYY-MM-DD
-            const estadoActual = req.body.estadoActual === 'true'; // si ya estaba justificado o no
+            const estadoActual = req.body.estadoActual === 'true' || req.body.estadoActual === true; // si ya estaba justificado o no
 
             if (usuarioId && fechaDia) {
                 try {
@@ -79,9 +78,11 @@ module.exports = async (req, res) => {
 
                     if (estadoActual) {
                         // Si ya estaba marcado, lo eliminamos
-                        snapshot.forEach(async (documento) => {
-                            await deleteDoc(doc(db, 'diasJust', documento.id));
+                        const deletePromises = [];
+                        snapshot.forEach((documento) => {
+                            deletePromises.push(deleteDoc(doc(db, 'diasJust', documento.id)));
                         });
+                        await Promise.all(deletePromises);
                     } else {
                         // Si no estaba marcado, lo creamos
                         const horaActual = new Date().toISOString().replace(/:/g, '-');
@@ -93,16 +94,20 @@ module.exports = async (req, res) => {
                             timestamp: Date.now()
                         });
                     }
+
+                    res.setHeader('Content-Type', 'application/json');
+                    return res.end(JSON.stringify({ success: true }));
                 } catch (err) {
                     console.error('Error actualizando justificación:', err);
+                    res.setHeader('Content-Type', 'application/json');
+                    res.statusCode = 500;
+                    return res.end(JSON.stringify({ success: false, error: err.message }));
                 }
             }
         }
 
-        // Redirección POST-redirect-GET manteniendo el mes seleccionado
-        res.statusCode = 303;
-        res.setHeader('Location', `/api/admin/ponFal?mes=${mesSeleccionado}`);
-        return res.end();
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify({ success: false, message: 'Acción no válida' }));
     }
 
     // 3. Obtener usuarios con el rol específico mediante el bot
@@ -165,13 +170,50 @@ module.exports = async (req, res) => {
         <head>
             <title>Control de Asistencia y Justificaciones</title>
             <script>
-                function bloquearBotones(form) {
-                    const botones = form.querySelectorAll('button');
-                    botones.forEach(b => {
-                        b.disabled = true;
-                        b.style.opacity = '0.5';
-                    });
+                async function enviarJust(event, form, usuarioId, fecha) {
+                    event.preventDefault();
+                    const btn = form.querySelector('button');
+                    const inputEstado = form.querySelector('input[name="estadoActual"]');
+                    const estadoActual = inputEstado.value === 'true';
+                    
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+
+                    try {
+                        const response = await fetch(window.location.href, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'toggleJust',
+                                usuarioId: usuarioId,
+                                fecha: fecha,
+                                estadoActual: estadoActual
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok && data.success) {
+                            // Alternar estado visual y valor del input sin recargar
+                            const nuevoEstado = !estadoActual;
+                            inputEstado.value = nuevoEstado;
+                            
+                            if (nuevoEstado) {
+                                btn.className = 'btn-just btn-checked';
+                            } else {
+                                btn.className = 'btn-just btn-unchecked';
+                            }
+                        } else {
+                            alert('Hubo un error al actualizar la justificación.');
+                        }
+                    } catch (err) {
+                        console.error('Error:', err);
+                    } finally {
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                    }
                 }
+
                 function cambiarMes(input) {
                     window.location.href = '?mes=' + input.value;
                 }
@@ -184,7 +226,7 @@ module.exports = async (req, res) => {
                 th { background-color: #2c3e50; color: white; position: sticky; left: 0; z-index: 2; }
                 .user-col { position: sticky; left: 0; background: #fff; z-index: 1; font-weight: bold; text-align: left; min-width: 150px; }
                 th.user-col { z-index: 3; }
-                .btn-just { padding: 5px 10px; font-size: 11px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; }
+                .btn-just { padding: 5px 10px; font-size: 11px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; transition: opacity 0.2s; }
                 .btn-checked { background: #27ae60; color: white; }
                 .btn-unchecked { background: #bdc3c7; color: #333; }
                 .servicio-info { font-size: 11px; color: #2980b9; margin-top: 4px; display: block; }
@@ -223,13 +265,10 @@ module.exports = async (req, res) => {
 
                                     return `
                                         <td>
-                                            <form method="POST" onsubmit="bloquearBotones(this)" style="margin:0;">
-                                                <input type="hidden" name="action" value="toggleJust">
-                                                <input type="hidden" name="usuarioId" value="${user.id}">
-                                                <input type="hidden" name="fecha" value="${fechaDia}">
+                                            <form onsubmit="enviarJust(event, this, '${user.id}', '${fechaDia}')" style="margin:0;">
                                                 <input type="hidden" name="estadoActual" value="${estaJustificado}">
                                                 <button type="submit" class="btn-just ${estaJustificado ? 'btn-checked' : 'btn-unchecked'}">
-                                                    ${estaJustificado ? 'JUST' : 'JUST'}
+                                                    JUST
                                                 </button>
                                             </form>
                                             ${servicioData ? `
@@ -238,7 +277,8 @@ module.exports = async (req, res) => {
                                                     <b>${formatearMinutos(servicioData.totalMinutos)}</b> hrs
                                                 </span>
                                             ` : ''}
-                                        `;
+                                        </td>
+                                    `;
                                 }).join('')}
                             </tr>
                         `).join('')}
